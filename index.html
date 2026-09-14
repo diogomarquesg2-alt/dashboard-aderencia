@@ -782,8 +782,10 @@
                     currentUser = userCredential.user;
                 }
 
+                const cleanItems = JSON.parse(JSON.stringify(items));
+
                 await setDoc(doc(db, 'artifacts', appId, 'store', 'aderencia_store'), { 
-                    items: items, 
+                    items: cleanItems, 
                     updatedAt: new Date().toISOString() 
                 });
                 showToast("Salvo na nuvem com sucesso!");
