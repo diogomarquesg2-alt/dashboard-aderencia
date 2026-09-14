@@ -737,6 +737,9 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
+                // Expõe o db globalmente para testes no console
+                window.db = db;
+                
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
@@ -755,8 +758,11 @@
                     } else {
                         saveToCloud(defaultRawData);
                     }
+                }, (error) => {
+                    console.error("Erro no Listener do Firestore:", error);
                 });
             } catch (err) {
+                console.error("FALHA CRÍTICA AO INICIALIZAR FIREBASE:", err);
                 const saved = localStorage.getItem('equiport_aderencia_data_v11');
                 if (saved) { rawData = JSON.parse(saved); } else { rawData = [...defaultRawData]; }
                 enrichData(rawData);
