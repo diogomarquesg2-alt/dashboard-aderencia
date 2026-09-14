@@ -61,25 +61,25 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-xs text-gray-400 block mb-1 font-medium">Mês</label>
-                    <select id="filtro-mes" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
+                    <select id="filtro-mes" onchange="aplicarFiltros()" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
                         <option value="">Todos os Meses</option>
                     </select>
                 </div>
                 <div>
                     <label class="text-xs text-gray-400 block mb-1 font-medium">Área</label>
-                    <select id="filtro-area" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
+                    <select id="filtro-area" onchange="aplicarFiltros()" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
                         <option value="">Todas as Áreas</option>
                     </select>
                 </div>
                 <div>
                     <label class="text-xs text-gray-400 block mb-1 font-medium">Categoria</label>
-                    <select id="filtro-categoria" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
+                    <select id="filtro-categoria" onchange="aplicarFiltros()" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
                         <option value="">Todas as Categorias</option>
                     </select>
                 </div>
                 <div>
                     <label class="text-xs text-gray-400 block mb-1 font-medium">Status</label>
-                    <select id="filtro-status" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
+                    <select id="filtro-status" onchange="aplicarFiltros()" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
                         <option value="">Todos os Status</option>
                     </select>
                 </div>
@@ -190,9 +190,7 @@
 
     <script>
         let dadosGlobais = [];
-        let chartCatInstance = null;
-        let chartExecInstance = null;
-        let chartStatusInstance = null;
+        let chartCat = null, chartExec = null, chartStatus = null;
 
         document.getElementById('import-excel-input').addEventListener('change', function(e) {
             const senha = prompt("Digite a senha de administrador para atualizar os dados:");
@@ -206,15 +204,24 @@
 
             const reader = new FileReader();
             reader.onload = function(evt) {
-                const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet);
-                
-                localStorage.setItem('equiport_dashboard_data', JSON.stringify(json));
-                alert("Planilha importada com sucesso e sincronizada!");
-                location.reload();
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if(json.length === 0) {
+                        alert("A planilha está vazia ou em formato incompatível.");
+                        return;
+                    }
+
+                    localStorage.setItem('equiport_dashboard_data', JSON.stringify(json));
+                    alert("Planilha importada com sucesso e sincronizada!");
+                    location.reload();
+                } catch (err) {
+                    alert("Erro ao ler o arquivo Excel. Verifique o formato.");
+                }
             };
             reader.readAsArrayBuffer(file);
         });
@@ -222,19 +229,161 @@
         window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem('equiport_dashboard_data');
             if (saved) {
-                dadosGlobais = JSON.parse(saved);
-                atualizarDashboard(dadosGlobais);
+                try {
+                    dadosGlobais = JSON.parse(saved);
+                    popularFiltros(dadosGlobais);
+                    atualizarDashboard(dadosGlobais);
+                } catch(e) {
+                    console.error("Erro ao carregar dados locais");
+                }
             }
         });
+
+        function popularFiltros(dados) {
+            const meses = [...new Set(dados.map(item => item.Mês || item.Mes || item.DATA || ''))].filter(Boolean);
+            const areas = [...new Set(dados.map(item => item.Área || item.Area || ''))].filter(Boolean);
+            const categorias = [...new Set(dados.map(item => item.Categoria || ''))].filter(Boolean);
+            const statusList = [...new Set(dados.map(item => item.Status || ''))].filter(Boolean);
+
+            preencherSelect('filtro-mes', meses);
+            preencherSelect('filtro-area', areas);
+            preencherSelect('filtro-categoria', categorias);
+            preencherSelect('filtro-status', statusList);
+        }
+
+        function preencherSelect(id, valores) {
+            const select = document.getElementById(id);
+            valores.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.text = val;
+                select.appendChild(opt);
+            });
+        }
+
+        function aplicarFiltros() {
+            const mes = document.getElementById('filtro-mes').value;
+            const area = document.getElementById('filtro-area').value;
+            const categoria = document.getElementById('filtro-categoria').value;
+            const status = document.getElementById('filtro-status').value;
+
+            let filtrados = dadosGlobais.filter(item => {
+                let matchMes = !mes || (item.Mês || item.Mes || item.DATA) == mes;
+                let matchArea = !area || (item.Área || item.Area) == area;
+                let matchCat = !categoria || item.Categoria == categoria;
+                let matchStatus = !status || item.Status == status;
+                return matchMes && matchArea && matchCat && matchStatus;
+            });
+
+            atualizarDashboard(filtrados);
+        }
+
+        function limparFiltros() {
+            document.getElementById('filtro-mes').value = '';
+            document.getElementById('filtro-area').value = '';
+            document.getElementById('filtro-categoria').value = '';
+            document.getElementById('filtro-status').value = '';
+            atualizarDashboard(dadosGlobais);
+        }
 
         function atualizarDashboard(dados) {
             document.getElementById('stat-total').innerText = dados.length;
             document.getElementById('contador-registros').innerText = dados.length + " registros";
-            // Aqui mantemos a estrutura funcional pronta para receber os dados da planilha
+
+            let totalPrev = 0, totalExec = 0, desvios = 0, aderentes = 0;
+            let catCount = {}, execCount = {}, statusCount = {};
+
+            let htmlTabela = '';
+            dados.forEach(item => {
+                let p = parseFloat(item.Previstas || item.Horas_Prev || item.Prev || 8) || 8;
+                let ex = parseFloat(item.Executadas || item.Horas_Exec || item.Exec || 8) || 8;
+                totalPrev += p;
+                totalExec += ex;
+
+                let st = item.Status || 'Concluído';
+                if(st.toLowerCase().includes('desvio') || st.toLowerCase().includes('não')) desvios++;
+                if(st.toLowerCase().includes('concluído') || st.toLowerCase().includes('sim')) aderentes++;
+
+                let cat = item.Categoria || 'Geral';
+                catCount[cat] = (catCount[cat] || 0) + 1;
+
+                let exName = item.Executante || item.Responsável || 'Equipe';
+                execCount[exName] = (execCount[exName] || 0) + 1;
+
+                statusCount[st] = (statusCount[st] || 0) + 1;
+
+                htmlTabela += `
+                    <tr class="hover:bg-gray-800/50 transition">
+                        <td class="p-4">${item.Data || item.DATA || '-'}</td>
+                        <td class="p-4">${item.Área || item.Area || '-'}</td>
+                        <td class="p-4"><span class="px-2 py-1 rounded text-xs bg-blue-500/10 text-blue-400">${item.Relatório || item.Relatorio || 'SIM'}</span></td>
+                        <td class="p-4">${exName}</td>
+                        <td class="p-4">${item.Atividade || item.Descrição || '-'}</td>
+                        <td class="p-4">${p}h / ${exh = ex}h</td>
+                        <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500/10 text-green-400">${st}</span></td>
+                        <td class="p-4 text-gray-500">${item.Motivo || '-'}</td>
+                    </tr>
+                `;
+            });
+
+            if(dados.length === 0) {
+                htmlTabela = `<tr><td colspan="8" class="p-8 text-center text-gray-500">Nenhum registro encontrado com os filtros selecionados.</td></tr>`;
+            }
+
+            document.getElementById('tabela-dados').innerHTML = htmlTabela;
+            document.getElementById('stat-horas').innerText = `${totalPrev}h / ${totalExec}h`;
+            let taxa = dados.length > 0 ? ((aderentes / dados.length) * 100).toFixed(1) : 0;
+            document.getElementById('stat-aderencia').innerText = taxa + '%';
+            document.getElementById('stat-desvios').innerText = desvios;
+
+            renderizarGraficos(catCount, execCount, statusCount);
         }
 
-        function limparFiltros() {
-            location.reload();
+        function renderizarGraficos(catCount, execCount, statusCount) {
+            if(chartCat) chartCat.destroy();
+            if(chartExec) chartExec.destroy();
+            if(chartStatus) chartStatus.destroy();
+
+            const ctxCat = document.getElementById('chartCategoria').getContext('2d');
+            chartCat = new Chart(ctxCat, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(catCount).length ? Object.keys(catCount) : ['Preventiva', 'Preditiva', 'Corretiva'],
+                    datasets: [{
+                        data: Object.keys(catCount).length ? Object.values(catCount) : [50, 30, 20],
+                        backgroundColor: ['#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#10b981']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', boxWidth: 12 } } } }
+            });
+
+            const ctxExec = document.getElementById('chartExecutante').getContext('2d');
+            chartExec = new Chart(ctxExec, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(execCount).length ? Object.keys(execCount) : ['Equipe 1', 'Equipe 2'],
+                    datasets: [{
+                        label: 'Atividades',
+                        data: Object.keys(execCount).length ? Object.values(execCount) : [10, 15],
+                        backgroundColor: '#10b981',
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#9ca3af' } }, y: { ticks: { color: '#9ca3af' } } }, plugins: { legend: { display: false } } }
+            });
+
+            const ctxStatus = document.getElementById('chartStatus').getContext('2d');
+            chartStatus = new Chart(ctxStatus, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(statusCount).length ? Object.keys(statusCount) : ['Concluído', 'Pendente'],
+                    datasets: [{
+                        data: Object.keys(statusCount).length ? Object.values(statusCount) : [80, 20],
+                        backgroundColor: ['#10b981', '#ef4444']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', boxWidth: 12 } } } }
+            });
         }
     </script>
 </body>
