@@ -1,3 +1,24 @@
+<!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const ADMIN_PASSWORD = "equiport2026";
+        let pendingAction = null;
+
+        const appId = 'equiport-aderencia-v1';
+        
+        // Suas chaves oficiais do Firebase inseridas aqui:
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxfDptYS8z4aGBPLI9FSboBQvxdoSzKTA",
+            authDomain: "equiport-aderencia.firebaseapp.com",
+            projectId: "equiport-aderencia",
+            storageBucket: "equiport-aderencia.firebasestorage.app",
+            messagingSenderId: "335189815020",
+            appId: "1:335189815020:web:2f62882849ee6c1a8bbfc9",
+            measurementId: "G-F6FJVZ1WPP"
+        };
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark">
 <head>
