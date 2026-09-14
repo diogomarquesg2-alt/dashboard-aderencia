@@ -459,36 +459,57 @@
                     const jsonRows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
                     
                     if(jsonRows.length > 1) {
-                        const newRawData = [];
-                        let headerRowIdx = 0;
-                        for(let i=0; i<Math.min(5, jsonRows.length); i++) {
-                            const rStr = JSON.stringify(jsonRows[i]).toLowerCase();
-                            if(rStr.includes('data') || rStr.includes('área') || rStr.includes('atividade')) {
-                                headerRowIdx = i;
+                        // Encontra a linha de cabeçalho dinamicamente
+                        let headerIdx = -1;
+                        let cols = {};
+                        for(let i=0; i<Math.min(10, jsonRows.length); i++) {
+                            const rowStr = JSON.stringify(jsonRows[i]).toLowerCase();
+                            if(rowStr.includes('data') && (rowStr.includes('área') || rowStr.includes('area')) && rowStr.includes('atividade')) {
+                                headerIdx = i;
+                                jsonRows[i].forEach((cell, idx) => {
+                                    if(!cell) return;
+                                    const c = String(cell).toLowerCase().trim();
+                                    if(c === 'data') cols.data = idx;
+                                    else if(c === 'mês' || c === 'mes') cols.mes = idx;
+                                    else if(c === 'área' || c === 'area') cols.area = idx;
+                                    else if(c.includes('relatório') || c.includes('relatorio')) cols.relatorio = idx;
+                                    else if(c.includes('responsável') || c.includes('responsavel') || c.includes('executante')) cols.responsavel = idx;
+                                    else if(c === 'atividade') cols.atividade = idx;
+                                    else if(c.includes('prevista') || c === 'prev') cols.previsto = idx;
+                                    else if(c.includes('executada') || c === 'exec') cols.executado = idx;
+                                    else if(c === 'status') cols.status = idx;
+                                    else if(c.includes('motivo') || c.includes('desvio')) cols.motivo = idx;
+                                });
                                 break;
                             }
                         }
 
-                        for (let r = headerRowIdx + 1; r < jsonRows.length; r++) {
+                        if(headerIdx === -1) {
+                            showToast("Não foi possível identificar o cabeçalho da planilha.");
+                            return;
+                        }
+
+                        const newRawData = [];
+                        for (let r = headerIdx + 1; r < jsonRows.length; r++) {
                             const row = jsonRows[r];
                             if(!row || row.length === 0) continue;
 
-                            let dataStr = typeof row[0] === 'number' ? formatExcelDate(row[0]) : (row[0] || "");
-                            let mesVal = row[1] || "Agosto";
-                            let areaVal = row[2] || "";
-                            let relatorioVal = row[4] || "Não";
-                            let responsavelVal = row[5] || "";
-                            let atividadeVal = row[6] || "";
+                            let dataVal = cols.data !== undefined ? row[cols.data] : row[0];
+                            let dataStr = typeof dataVal === 'number' ? formatExcelDate(dataVal) : (dataVal || "");
+                            let mesVal = cols.mes !== undefined ? row[cols.mes] : (row[1] || "Agosto");
+                            let areaVal = cols.area !== undefined ? row[cols.area] : (row[2] || "");
+                            let relatorioVal = cols.relatorio !== undefined ? row[cols.relatorio] : (row[4] || "Não");
+                            let responsavelVal = cols.responsavel !== undefined ? row[cols.responsavel] : (row[5] || "");
+                            let atividadeVal = cols.atividade !== undefined ? row[cols.atividade] : (row[6] || "");
 
                             if (areaVal || atividadeVal) {
-                                let previstoVal = (row[7] !== undefined && !isNaN(row[7])) ? Number(row[7]) : 8;
-                                let executadoVal = (row[8] !== undefined && !isNaN(row[8])) ? Number(row[8]) : 0;
+                                let prevRaw = cols.previsto !== undefined ? row[cols.previsto] : row[7];
+                                let execRaw = cols.executado !== undefined ? row[cols.executado] : row[8];
+                                let previstoVal = (prevRaw !== undefined && !isNaN(prevRaw)) ? Number(prevRaw) : 8;
+                                let executadoVal = (execRaw !== undefined && !isNaN(execRaw)) ? Number(execRaw) : 0;
                                 
-                                // Pega o status da coluna L (índice 11) ou deduz pelo executado
-                                let statusVal = row[11] ? String(row[11]).trim() : (executadoVal > 0 ? "Concluído" : "Não executado");
-                                
-                                // Pega o motivo da coluna N (índice 13)
-                                let motivoVal = row[13] ? String(row[13]).trim() : "";
+                                let statusVal = cols.status !== undefined && row[cols.status] ? String(row[cols.status]).trim() : (executadoVal > 0 ? "Concluído" : "Não executado");
+                                let motivoVal = cols.motivo !== undefined && row[cols.motivo] ? String(row[cols.motivo]).trim() : "";
 
                                 newRawData.push({
                                     data: dataStr, mes: mesVal, area: areaVal, relatorio: relatorioVal,
@@ -511,7 +532,7 @@
                     }
                 } catch(error) {
                     console.error(error);
-                    showToast("Erro ao ler o arquivo Excel.");
+                    showToast("Erro ao ler o arquivo Excel. Verifique o formato.");
                 } finally {
                     document.getElementById('fileInput').value = '';
                 }
