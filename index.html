@@ -737,7 +737,6 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                // Expõe o db globalmente para testes no console
                 window.db = db;
                 
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -746,7 +745,7 @@
                     await signInAnonymously(auth);
                 }
 
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'aderencia_store');
+                const docRef = doc(db, 'artifacts', appId, 'store', 'aderencia_store');
                 onSnapshot(docRef, (docSnap) => {
                     if (docSnap.exists() && docSnap.data().items?.length > 0) {
                         rawData = docSnap.data().items;
@@ -783,7 +782,7 @@
                     currentUser = userCredential.user;
                 }
 
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'aderencia_store'), { 
+                await setDoc(doc(db, 'artifacts', appId, 'store', 'aderencia_store'), { 
                     items: items, 
                     updatedAt: new Date().toISOString() 
                 });
