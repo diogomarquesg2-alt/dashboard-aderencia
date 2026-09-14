@@ -219,7 +219,7 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const ADMIN_PASSWORD = "equiport2026";
@@ -462,7 +462,11 @@
                         const newRawData = [];
                         let headerRowIdx = 0;
                         for(let i=0; i<Math.min(5, jsonRows.length); i++) {
-                            if(JSON.stringify(jsonRows[i]).toLowerCase().includes('data')) { headerRowIdx = i; break; }
+                            const rStr = JSON.stringify(jsonRows[i]).toLowerCase();
+                            if(rStr.includes('data') || rStr.includes('área') || rStr.includes('atividade')) {
+                                headerRowIdx = i;
+                                break;
+                            }
                         }
 
                         for (let r = headerRowIdx + 1; r < jsonRows.length; r++) {
@@ -477,10 +481,14 @@
                             let atividadeVal = row[6] || "";
 
                             if (areaVal || atividadeVal) {
-                                let previstoVal = !isNaN(row[7]) ? Number(row[7]) : 8;
-                                let executadoVal = !isNaN(row[8]) ? Number(row[8]) : 0;
-                                let statusVal = row[11] || (executadoVal > 0 ? "Concluído" : "Não executado");
-                                let motivoVal = row[13] || "";
+                                let previstoVal = (row[7] !== undefined && !isNaN(row[7])) ? Number(row[7]) : 8;
+                                let executadoVal = (row[8] !== undefined && !isNaN(row[8])) ? Number(row[8]) : 0;
+                                
+                                // Pega o status da coluna L (índice 11) ou deduz pelo executado
+                                let statusVal = row[11] ? String(row[11]).trim() : (executadoVal > 0 ? "Concluído" : "Não executado");
+                                
+                                // Pega o motivo da coluna N (índice 13)
+                                let motivoVal = row[13] ? String(row[13]).trim() : "";
 
                                 newRawData.push({
                                     data: dataStr, mes: mesVal, area: areaVal, relatorio: relatorioVal,
@@ -497,9 +505,12 @@
                             initializeFilters();
                             applyFilters();
                             showToast(`Planilha importada com sucesso! (${rawData.length} atividades)`);
+                        } else {
+                            showToast("Nenhuma linha válida encontrada na planilha.");
                         }
                     }
                 } catch(error) {
+                    console.error(error);
                     showToast("Erro ao ler o arquivo Excel.");
                 } finally {
                     document.getElementById('fileInput').value = '';
