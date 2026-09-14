@@ -6,6 +6,7 @@
     <title>EQUIPORT - Dashboard de Aderência</title>
     
     <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> <!-- ou mantenha a sua versão do tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -756,13 +757,25 @@
 
         async function saveToCloud(items) {
             try {
-                if (db && auth.currentUser) {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'aderencia_store'), { items: items, updatedAt: new Date().toISOString() });
-                    showToast("Salvo na nuvem com sucesso!");
+                if (!db) {
+                    throw new Error("Firestore não inicializado.");
                 }
+                
+                let currentUser = auth.currentUser;
+                if (!currentUser) {
+                    const userCredential = await signInAnonymously(auth);
+                    currentUser = userCredential.user;
+                }
+
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'aderencia_store'), { 
+                    items: items, 
+                    updatedAt: new Date().toISOString() 
+                });
+                showToast("Salvo na nuvem com sucesso!");
             } catch (e) {
+                console.error("Erro ao salvar na nuvem:", e);
                 localStorage.setItem('equiport_aderencia_data_v11', JSON.stringify(items));
-                showToast("Salvo localmente (modo offline).");
+                showToast("Erro ao sincronizar com a nuvem. Salvo localmente.");
             }
         }
 
