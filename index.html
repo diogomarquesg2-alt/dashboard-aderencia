@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQUIPORT - Painel de Aderência à Programação</title>
+    <title>EQUIPORT - Dashboard de Aderência</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js para gráficos -->
@@ -14,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -26,365 +27,904 @@
                             red: '#E30613',
                             'dark-bg': '#1E2336',
                             'darker-bg': '#151826',
-                            'card-dark': '#262D45',
-                            'sidebar': '#1B2031'
+                            'card-dark': '#262D45'
                         }
                     }
                 }
             }
         }
     </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 8px; padding: 12px; position: fixed;
+            z-index: 1000; right: 30px; bottom: 30px; opacity: 0; transition: opacity 0.3s, visibility 0.3s;
+        }
+        #toast.show { visibility: visible; opacity: 1; }
+        .dark #toast { background-color: #4ade80; color: #151826; font-weight: 600; }
+    </style>
 </head>
-<body class="bg-equiport-darker-bg text-gray-100 min-h-screen flex flex-col font-sans">
-    <header class="bg-equiport-dark-bg border-b border-gray-800 shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <div class="bg-equiport-red p-2.5 rounded-xl text-white shadow-lg shadow-equiport-red/30">
-                    <i class="fa-solid fa-chart-line text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold tracking-wide text-white">EQUIPORT</h1>
-                    <p class="text-xs text-gray-400">Painel de Aderência à Programação</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-3">
-                <span class="text-xs text-gray-400 hidden md:inline">Sincronizado na Nuvem em tempo real</span>
+
+<body class="bg-gray-50 text-gray-800 dark:bg-equiport-darker-bg dark:text-gray-100 h-screen flex overflow-hidden">
+    
+    <div id="toast">Mensagem do sistema</div>
+
+    <!-- MODAL DE SENHA ADMINISTRATIVA -->
+    <div id="password-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden">
+        <div class="bg-white dark:bg-equiport-card-dark p-6 rounded-xl shadow-xl w-96 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-bold mb-2 text-gray-900 dark:text-white"><i class="fas fa-lock text-equiport-red mr-2"></i> Área Restrita</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Insira a senha de administrador para autorizar esta ação (Modo Leitura ativo para demais usuários).</p>
+            <input type="password" id="admin-password-input" placeholder="Digite a senha..." class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white mb-4" onkeydown="if(event.key === 'Enter') confirmAdminAction()">
+            <div class="flex justify-end space-x-2">
+                <button onclick="closePasswordModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors">Cancelar</button>
+                <button onclick="confirmAdminAction()" class="px-4 py-2 bg-equiport-red text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">Confirmar</button>
             </div>
         </div>
-    </header>
+    </div>
 
-    <div class="flex flex-grow">
-        <!-- Sidebar de Filtros -->
-        <aside class="w-72 bg-equiport-sidebar border-r border-gray-800 p-5 hidden lg:block space-y-6">
-            <h2 class="text-sm font-bold text-gray-300 uppercase tracking-wider"><i class="fa-solid fa-filter mr-2 text-equiport-red"></i> Filtros de Aderência</h2>
+    <aside class="w-72 bg-white dark:bg-equiport-dark-bg border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shadow-lg z-10 transition-colors">
+        
+        <!-- Logo EQUIPORT em Vetor (SVG) -->
+        <div class="h-20 flex items-center justify-center border-b border-gray-200 dark:border-gray-700 bg-black p-3">
+            <svg viewBox="0 0 420 120" class="w-full h-full max-h-14" preserveAspectRatio="xMidYMid meet">
+                <path d="M 35,20 L 105,25 L 45,60 Z" fill="none" stroke="#E30613" stroke-width="4" />
+                <path d="M 25,30 L 95,35 L 40,75 Z" fill="none" stroke="#E30613" stroke-width="3" />
+                <path d="M 15,40 L 85,45 L 35,90 Z" fill="none" stroke="#E30613" stroke-width="2" />
+                <path d="M 45,35 L 115,40 L 105,95 L 55,110 Z" fill="none" stroke="#FFFFFF" stroke-width="5" />
+                <text x="130" y="70" font-family="'Inter', sans-serif" font-weight="900" font-size="52" fill="#FFFFFF" letter-spacing="1.5">EQUIPORT</text>
+                <text x="360" y="52" font-family="'Inter', sans-serif" font-weight="700" font-size="16" fill="#FFFFFF">®</text>
+                <text x="133" y="98" font-family="'Inter', sans-serif" font-weight="700" font-size="13.5" fill="#E30613" letter-spacing="3.2">EQUIPAMENTOS PARA PORTOS</text>
+            </svg>
+        </div>
+
+        <div class="p-5 flex-1 overflow-y-auto">
+            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4"><i class="fas fa-search mr-1"></i> Busca Rápida</h2>
             
-            <div class="space-y-4">
-                <div>
-                    <label class="text-xs text-gray-400 block mb-1 font-medium">Mês</label>
-                    <select id="filtro-mes" onchange="aplicarFiltros()" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
-                        <option value="">Todos os Meses</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400 block mb-1 font-medium">Área</label>
-                    <select id="filtro-area" onchange="aplicarFiltros()" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
-                        <option value="">Todas as Áreas</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400 block mb-1 font-medium">Categoria</label>
-                    <select id="filtro-categoria" onchange="aplicarFiltros()" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
-                        <option value="">Todas as Categorias</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400 block mb-1 font-medium">Status</label>
-                    <select id="filtro-status" onchange="aplicarFiltros()" class="w-full bg-equiport-darker-bg border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-equiport-red">
-                        <option value="">Todos os Status</option>
-                    </select>
-                </div>
-                <button onclick="limparFiltros()" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-medium transition flex items-center justify-center space-x-2">
-                    <i class="fa-solid fa-rotate-left"></i>
-                    <span>Limpar Filtros</span>
+            <div class="mb-5">
+                <input type="text" id="search-input" onkeyup="applyFilters()" placeholder="Ex: Marimex, Davi..." class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-colors">
+            </div>
+
+            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 border-t border-gray-200 dark:border-gray-700 pt-4"><i class="fas fa-filter mr-1"></i> Filtros de Aderência</h2>
+            
+            <div class="mb-4">
+                <label for="filter-mes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mês</label>
+                <select id="filter-mes" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
+                    <option value="ALL">Todos os Meses</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label for="filter-semana" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semana</label>
+                <select id="filter-semana" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
+                    <option value="ALL">Todas as Semanas</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label for="filter-mercado" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Área</label>
+                <select id="filter-mercado" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
+                    <option value="ALL">Todas as Áreas</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label for="filter-categoria" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Categoria</label>
+                <select id="filter-categoria" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
+                    <option value="ALL">Todas as Categorias</option>
+                </select>
+            </div>
+
+            <div class="mb-5">
+                <label for="filter-status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                <select id="filter-status" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
+                    <option value="ALL">Todos os Status</option>
+                    <option value="Concluído">Concluído</option>
+                    <option value="Não executado">Não executado</option>
+                </select>
+            </div>
+
+            <button onclick="resetFilters()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 mb-6">
+                <i class="fas fa-undo mr-2"></i> Limpar Filtros
+            </button>
+            
+            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 border-t border-gray-200 dark:border-gray-700 pt-4"><i class="fas fa-cloud mr-1"></i> Nuvem (Global)</h2>
+            
+            <!-- Botão protegido por senha admin para importar -->
+            <button onclick="requestPasswordForAction('import')" class="w-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 font-medium py-2 px-4 rounded-lg cursor-pointer transition-colors dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 mb-1">
+                <i class="fas fa-file-excel mr-2 text-green-600"></i> Importar Excel <i class="fas fa-lock text-[10px] ml-2"></i>
+            </button>
+            <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls" onchange="handleFileSelected(event)" />
+            <p class="text-[11px] text-gray-500 text-center mb-4"><i class="fas fa-sync text-[9px] mr-1"></i> Sincroniza em tempo real para todos</p>
+            
+            <button onclick="requestPasswordForAction('resetData')" class="w-full flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-medium py-2 px-4 rounded-lg transition-colors dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-400 text-xs">
+                <i class="fas fa-trash-alt mr-2"></i> Restaurar Dados Originais
+            </button>
+        </div>
+        
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+            <button onclick="toggleTheme()" class="w-full flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300 hover:text-equiport-red transition-colors">
+                <i id="theme-icon" class="fas fa-sun"></i>
+                <span id="theme-text">Modo Claro</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        
+        <header class="h-16 flex items-center justify-between px-8 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-equiport-dark-bg z-10">
+            <div>
+                <h1 class="text-xl font-bold">Painel de Aderência à Programação</h1>
+                <p class="text-xs text-gray-500 dark:text-gray-400" id="header-date">Sincronizado na Nuvem em tempo real</p>
+            </div>
+            <div class="flex space-x-3 items-center">
+                <button onclick="requestPasswordForAction('export')" class="bg-equiport-red hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
+                    <i class="fas fa-download mr-2"></i> Exportar <i class="fas fa-lock text-[10px] ml-2"></i>
                 </button>
             </div>
+        </header>
 
-            <hr class="border-gray-800">
+        <div class="flex-1 overflow-y-auto p-8">
+            
+            <!-- Cards de KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                
+                <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total de Atividades</p>
+                            <h3 class="text-3xl font-bold" id="kpi-total">0</h3>
+                        </div>
+                        <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                            <i class="fas fa-clipboard-list text-xl"></i>
+                        </div>
+                    </div>
+                </div>
 
-            <div class="space-y-3">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Nuvem (Global)</h3>
-                <label for="import-excel-input" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 px-3 rounded-lg text-sm font-medium cursor-pointer transition flex items-center justify-center space-x-2 shadow">
-                    <i class="fa-solid fa-file-excel"></i>
-                    <span>Importar Excel <i class="fa-solid fa-lock text-xs ml-1"></i></span>
-                </label>
-                <input type="file" id="import-excel-input" accept=".xlsx, .xls" class="hidden">
-            </div>
-        </aside>
+                <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Horas Previstas x Exec</p>
+                            <h3 class="text-3xl font-bold"><span id="kpi-prev">0</span> / <span id="kpi-exec" class="text-green-600 dark:text-green-400">0</span></h3>
+                        </div>
+                        <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-clock text-xl"></i>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Conteúdo Principal -->
-        <main class="flex-grow max-w-7xl mx-auto px-4 py-6 space-y-6">
-            <!-- Cards de Indicadores -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-equiport-card-dark p-5 rounded-2xl border border-gray-800 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-gray-400 font-medium uppercase">Total de Atividades</p>
-                        <h3 id="stat-total" class="text-2xl font-bold text-white mt-1">0</h3>
+                <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">% de Aderência</p>
+                            <h3 class="text-3xl font-bold text-green-500" id="kpi-aderencia">0%</h3>
+                        </div>
+                        <div class="p-3 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                            <i class="fas fa-chart-pie text-xl"></i>
+                        </div>
                     </div>
-                    <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl"><i class="fa-solid fa-file-lines text-xl"></i></div>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-4 dark:bg-gray-700">
+                        <div class="bg-green-500 h-1.5 rounded-full" id="kpi-aderencia-bar" style="width: 0%"></div>
+                    </div>
                 </div>
-                <div class="bg-equiport-card-dark p-5 rounded-2xl border border-gray-800 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-gray-400 font-medium uppercase">Horas Previstas x Exec</p>
-                        <h3 id="stat-horas" class="text-xl font-bold text-white mt-1">0h / 0h</h3>
+
+                <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Desvios Reportados</p>
+                            <h3 class="text-3xl font-bold text-equiport-red" id="kpi-desvios">0</h3>
+                        </div>
+                        <div class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-equiport-red">
+                            <i class="fas fa-exclamation-triangle text-xl"></i>
+                        </div>
                     </div>
-                    <div class="p-3 bg-purple-500/10 text-purple-400 rounded-xl"><i class="fa-solid fa-clock text-xl"></i></div>
-                </div>
-                <div class="bg-equiport-card-dark p-5 rounded-2xl border border-gray-800 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-gray-400 font-medium uppercase">% de Aderência</p>
-                        <h3 id="stat-aderencia" class="text-2xl font-bold text-green-400 mt-1">0%</h3>
-                    </div>
-                    <div class="p-3 bg-green-500/10 text-green-400 rounded-xl"><i class="fa-solid fa-chart-pie text-xl"></i></div>
-                </div>
-                <div class="bg-equiport-card-dark p-5 rounded-2xl border border-gray-800 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-gray-400 font-medium uppercase">Desvios Reportados</p>
-                        <h3 id="stat-desvios" class="text-2xl font-bold text-red-400 mt-1">0</h3>
-                    </div>
-                    <div class="p-3 bg-red-500/10 text-red-400 rounded-xl"><i class="fa-solid fa-triangle-exclamation text-xl"></i></div>
                 </div>
             </div>
 
             <!-- Gráficos -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-equiport-card-dark p-5 rounded-2xl border border-gray-800 shadow-sm">
-                    <h3 class="text-sm font-bold text-gray-300 mb-4 uppercase tracking-wider">Desempenho por Categoria</h3>
-                    <div class="h-64 flex items-center justify-center">
-                        <canvas id="chartCategoria"></canvas>
-                    </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white dark:bg-equiport-card-dark p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 uppercase tracking-wide">Desempenho por Categoria</h3>
+                    <div class="relative h-64"><canvas id="chartCategoria"></canvas></div>
                 </div>
-                <div class="bg-equiport-card-dark p-5 rounded-2xl border border-gray-800 shadow-sm">
-                    <h3 class="text-sm font-bold text-gray-300 mb-4 uppercase tracking-wider">Produtividade por Executante</h3>
-                    <div class="h-64 flex items-center justify-center">
-                        <canvas id="chartExecutante"></canvas>
-                    </div>
+                <div class="bg-white dark:bg-equiport-card-dark p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 uppercase tracking-wide">Produtividade por Executante</h3>
+                    <div class="relative h-64"><canvas id="chartEquipe"></canvas></div>
                 </div>
-                <div class="bg-equiport-card-dark p-5 rounded-2xl border border-gray-800 shadow-sm">
-                    <h3 class="text-sm font-bold text-gray-300 mb-4 uppercase tracking-wider">Status Geral</h3>
-                    <div class="h-64 flex items-center justify-center">
-                        <canvas id="chartStatus"></canvas>
-                    </div>
+                <div class="bg-white dark:bg-equiport-card-dark p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 uppercase tracking-wide">Status Geral</h3>
+                    <div class="relative h-64 flex justify-center"><canvas id="chartStatus"></canvas></div>
                 </div>
             </div>
 
-            <!-- Tabela de Detalhamento -->
-            <div class="bg-equiport-card-dark rounded-2xl border border-gray-800 shadow-sm overflow-hidden">
-                <div class="p-5 border-b border-gray-800 flex justify-between items-center">
-                    <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wider">Detalhamento das Atividades</h3>
-                    <span id="contador-registros" class="text-xs text-gray-400">0 registros</span>
+            <!-- Tabela Principal -->
+            <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col">
+                <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-equiport-card-dark">
+                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Detalhamento das Atividades</h3>
+                    <span class="text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 py-1 px-3 rounded-full" id="table-count">0 registros</span>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-equiport-darker-bg text-gray-400 uppercase text-xs border-b border-gray-800">
-                                <th class="p-4 font-semibold">Data</th>
-                                <th class="p-4 font-semibold">Área</th>
-                                <th class="p-4 font-semibold">Relatório Necessário?</th>
-                                <th class="p-4 font-semibold">Executante</th>
-                                <th class="p-4 font-semibold">Atividade</th>
-                                <th class="p-4 font-semibold">Horas (Prev/Exec)</th>
-                                <th class="p-4 font-semibold">Status</th>
-                                <th class="p-4 font-semibold">Motivo Desvio</th>
+                    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-800/50 dark:text-gray-300">
+                            <tr>
+                                <th class="px-6 py-3">Data</th>
+                                <th class="px-6 py-3">Área</th>
+                                <th class="px-6 py-3 text-center">Relatório necessário?</th>
+                                <th class="px-6 py-3">Executante</th>
+                                <th class="px-6 py-3">Atividade</th>
+                                <th class="px-6 py-3 text-center">Horas (Prev/Exec)</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3">Motivo Desvio</th>
                             </tr>
                         </thead>
-                        <tbody id="tabela-dados" class="divide-y divide-gray-800 text-gray-300">
-                            <tr>
-                                <td colspan="8" class="p-8 text-center text-gray-500">Nenhum dado carregado. Utilize o botão "Importar Excel" na barra lateral para carregar a planilha.</td>
-                            </tr>
-                        </tbody>
+                        <tbody id="table-body"></tbody>
                     </table>
                 </div>
             </div>
-        </main>
-    </div>
+            
+            <footer class="mt-8 text-center text-xs text-gray-400 pb-4">
+                &copy; 2026 EQUIPORT Equipamentos para Portos. Todos os direitos reservados.
+            </footer>
+        </div>
+    </main>
 
-    <script>
-        let dadosGlobais = [];
-        let chartCat = null, chartExec = null, chartStatus = null;
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        document.getElementById('import-excel-input').addEventListener('change', function(e) {
-            const senha = prompt("Digite a senha de administrador para atualizar os dados:");
-            if (senha !== "equiport2026") {
-                alert("Senha incorreta!");
-                e.target.value = '';
+        const ADMIN_PASSWORD = "equiport2026";
+        let pendingAction = null;
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'equiport-aderencia-v1';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+        let app, db, auth;
+        let rawData = [];
+        let filteredData = [];
+        let charts = {};
+
+        const defaultRawData = [
+            {data: '17/08/2026', mes: 'Agosto', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Davi / Muller', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '17/08/2026', mes: 'Agosto', area: 'TRANSBRASA', relatorio: 'Sim', responsavel: 'Davi / Danilson', atividade: 'Manutenção preditiva de 750 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '18/08/2026', mes: 'Agosto', area: 'DINAMO ALEMOA', relatorio: 'Sim', responsavel: 'Gabriel / Muller', atividade: 'Manutenção preventiva de 17.250 - Frota 03', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '18/08/2026', mes: 'Agosto', area: 'DELLA VOLPE', relatorio: 'Sim', responsavel: 'Davi / Leandro', atividade: 'Manutenção preventiva de 10.000 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '18/08/2026', mes: 'Agosto', area: 'CGM LOGÍSTICA', relatorio: 'Sim', responsavel: 'Joao / Danilson', atividade: 'Manutenção preditiva de 3.750 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '19/08/2026', mes: 'Agosto', area: 'DINAMO ANCHIETA', relatorio: 'Sim', responsavel: 'Davi / Muller', atividade: 'Inspeções de rotina', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '19/08/2026', mes: 'Agosto', area: 'ISIS PÁTIO 01', relatorio: 'Sim', responsavel: 'Galacho', atividade: 'Montagem do motor QSM11 Frota 08', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Precisou levantar lança'},
+            {data: '19/08/2026', mes: 'Agosto', area: 'ISIS PÁTIO 02', relatorio: 'Sim', responsavel: 'Carlos / Matheus', atividade: 'Avaliar a trinca da lança Frota 03, Inspecionar na Porto Brasil o serviço do diferencial', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '19/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira / Danilson', atividade: 'Efetuar a reparação nos chicotes da transmissão e do chassi', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Emergencia marimex'},
+            {data: '19/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Leandro / Matheus', atividade: 'Efetuar a limpeza dos aros de roda para fazer ensaios', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '19/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'João Maurício / Gabriel', atividade: 'Sacar bucha danificada da lança móvel, avaliar mangueiras do chassi sem retirar, separação das peças do chassi e lança', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Falta separação das peças do chassi e lança'},
+            {data: '19/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Sim', responsavel: 'Arthur', atividade: 'Fazer lista de peças faltante e danificada', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '20/08/2026', mes: 'Agosto', area: 'CRAGEA', relatorio: 'Sim', responsavel: 'Pereira / Muller', atividade: 'Manutenção preventiva de 5.000 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '20/08/2026', mes: 'Agosto', area: 'TRANSBRASA', relatorio: 'Sim', responsavel: 'Davi / Leandro', atividade: 'Manutenção preditiva de 1.250 horas KC1', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '20/08/2026', mes: 'Agosto', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Gabriel / Danilson', atividade: 'Manutenção preventiva de 150 horas E-404', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '20/08/2026', mes: 'Agosto', area: 'ISIS PÁTIO 01', relatorio: 'Sim', responsavel: 'Galacho', atividade: 'Montagem do motor QSM11 Frota 08', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '20/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos / Matheus', atividade: 'Alterar a posição que está calcado o equipamento EQP007', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '21/08/2026', mes: 'Agosto', area: 'TRANSBRASA', relatorio: 'Sim', responsavel: 'Galacho', atividade: 'Montagem do motor QSM11 Frota 08', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '21/08/2026', mes: 'Agosto', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Davi / Leandro', atividade: 'Manutenção preventiva de 1.250 horas - KC3', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '21/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Gabriel / Danilson', atividade: 'Manutenção preventiva de 150 horas - E-405', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '21/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos', atividade: 'Analisar o mecanismo anti-tombamento, se houver necessidade já substituir', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Atendimento Transtec'},
+            {data: '21/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'João Maurício', atividade: 'Verificar escapamento danificado, reparar com as peças compradas e algumas peças que veio da Granport', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '21/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Arthur / Matheus', atividade: 'Fixação dos tubos e calhas do chassi', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Realizado a remoção das rótulas do link e limpeza. Falta abraçadeiras, parafusos e porca'},
+            {data: '22/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira / Muller', atividade: 'Dar continuação nos serviços de reparação nos chicotes da transmissão e do chassi, revisão de chave geral e contatora', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '22/08/2026', mes: 'Agosto', area: 'ISIS PÁTIO 01', relatorio: 'Sim', responsavel: 'Galacho', atividade: 'Montagem do motor QSM11 Frota 08', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '22/08/2026', mes: 'Agosto', area: 'DP WORLD', relatorio: 'Sim', responsavel: 'Davi / Leandro', atividade: 'Inspeções e lavagens dos equipamentos', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '22/08/2026', mes: 'Agosto', area: 'LSL TRANSPORTES', relatorio: 'Sim', responsavel: 'Galacho', atividade: 'Limpeza de tanque ARELIS', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '22/08/2026', mes: 'Agosto', area: 'ISIS PÁTIO 01', relatorio: 'Sim', responsavel: 'Galacho', atividade: 'Montagem do motor QSM11 Frota 08', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Falta de material (parafusos)'},
+            {data: '24/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Arthur / Gabriel', atividade: 'Continuação, fixação dos tubos e calhas do chassi, substituição das rótulas dos links de direção, analisar o mecanismo anti tombamento, se houver necessidade já substituir', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Link não bate as especificação tecnica.'},
+            {data: '24/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'João Maurício / Danilson', atividade: 'Continuação, reparar escapamento danificado', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '24/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos', atividade: 'Verificar junto com o Flávio os serviços a serem realizados nessa semana na EQP007', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '25/08/2026', mes: 'Agosto', area: 'CESARI', relatorio: 'Sim', responsavel: 'Leandro', atividade: 'Manutenção preventiva de 500 horas Empilhadeira Elétrica KONECRANES', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '25/08/2026', mes: 'Agosto', area: 'S. MAGALHÃES', relatorio: 'Sim', responsavel: 'Pereira', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '25/08/2026', mes: 'Agosto', area: 'DINAMO ANCHIETA', relatorio: 'Sim', responsavel: 'Gabriel / Danilson', atividade: 'Instalar as mangueiras hidráulicas do chassi e da bomba hidráulica', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '25/08/2026', mes: 'Agosto', area: 'DINAMO FERREIRA', relatorio: 'Sim', responsavel: 'Arthur / Galacho', atividade: 'Substituir o cilindro de telescopagem H092 02', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '25/08/2026', mes: 'Agosto', area: 'DINAMO ALEMOA', relatorio: 'Sim', responsavel: 'Davi / Müller', atividade: 'Inspeções de rotina nas 03 máquinas', previsto: 4, executado: 4, status: 'Concluído', motivo: ''},
+            {data: '25/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Dácio / João Maurício', atividade: 'Instalar peças aprovadas - tampa do tanque de expansão e sensor de 0 a 25 bar da transmissão', previsto: 4, executado: 4, status: 'Concluído', motivo: ''},
+            {data: '25/08/2026', mes: 'Agosto', area: 'MOVICT ITATIAIA', relatorio: 'Sim', responsavel: 'Gabriel / Danilson / Matheus', atividade: 'Limpeza dos chicotes elétricos', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '26/08/2026', mes: 'Agosto', area: 'TRANSBRASA', relatorio: 'Sim', responsavel: 'Pereira', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '26/08/2026', mes: 'Agosto', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Davi / Danilson', atividade: 'Manutenção preventiva de 1.500 horas + verificar o vazamento no redutor de giro e fazer testes', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '26/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Muller', atividade: 'Verificar e bombas hidráulicas de 105cc', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '26/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Gabriel / Matheus', atividade: 'Limpeza da contenção de óleo', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '26/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos / Leandro', atividade: 'Organização e limpeza de oficina, FOD007, separação de parafusos', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '26/08/2026', mes: 'Agosto', area: 'INTERMARÍTIMA', relatorio: 'Sim', responsavel: 'João Maurício', atividade: 'Manutenção preventiva de 500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '26/08/2026', mes: 'Agosto', area: 'ISIS PÁTIO 01', relatorio: 'Sim', responsavel: 'Carlos', atividade: 'Levantamento das peças da 08', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '27/08/2026', mes: 'Agosto', area: 'ISIS PÁTIO 02', relatorio: 'Sim', responsavel: 'Carlos', atividade: 'Levantamento das peças da 03', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '27/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Muller', atividade: 'Remover o cabeçote do cilindro de telescopagem e realizar o SS. Eqp07', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '27/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos / Muller', atividade: 'Verificar e preparar as peças da bomba hidráulica para envio, além de realizar o reposicionamento de peças na oficina', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '27/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Gabriel', atividade: 'Verificar a passagem de água na Mariliza', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '27/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Leandro / Davi', atividade: 'Lavar a L590 e verificar as válvulas e os anéis do tubo do LS. Eqp07', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '27/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Arthur / Danilson', atividade: 'Realizar o SS no container', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '28/08/2026', mes: 'Agosto', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Arthur / Danilson', atividade: 'Manutenção preventiva de 1.000 horas E-102', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '28/08/2026', mes: 'Agosto', area: 'HUDMARCO', relatorio: 'Sim', responsavel: 'Gabriel / Matheus', atividade: 'Manutenção preventiva de 2.000 horas (RPH9)', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '28/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Galacho / Dêncio', atividade: 'Movimentação de materiais, equipamentos e peças - Lavagem do chassi EQP07', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '28/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Davi / Carlos', atividade: 'Repor e montar 02 bombas 105 cl e s-50', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Atendimento D/W = Neikcr'},
+            {data: '28/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Leandro / Matheus', atividade: 'Lavagem da cabine que se encontra avariada - empoeiramento - lavar carro09', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '28/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira', atividade: 'Revisar e montar chicote da cabine EQP07', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Atendimento cesari'},
+            {data: '29/08/2026', mes: 'Agosto', area: 'AURORA TERMINAIS', relatorio: 'Sim', responsavel: 'Carlos / Uenison', atividade: 'Manutenção preventiva de 9.500 horas + verificar sistema de freio estacionário', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '29/08/2026', mes: 'Agosto', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Pisca', atividade: 'Verificar sistema do ar-condicionado E-405 não está gelando', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '31/08/2026', mes: 'Agosto', area: 'NYK', relatorio: 'Sim', responsavel: 'Carlos / Muller', atividade: 'Retirar o cilindro da quinta roda do Terberg', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '31/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira / Davi', atividade: 'Revisar e montar chicote da cabine', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '31/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'João Maurício', atividade: 'Fazer documentação de viagem + esvaziar a Strada 1 VSSU25 e levar na oficina', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '31/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Arthur / Matheus', atividade: 'Efetuar a desmontagem das calhas da estria da lança, preparando para pintura', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '31/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Galacho / Danilson', atividade: 'Efetuar a instalação dos bicos injetores + regulagem de válvulas e troca da junta da tampa de válvulas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '31/08/2026', mes: 'Agosto', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Gabriel / Leandro', atividade: 'Efetuar a lavagem geral do chassi, removendo os respingos de solda', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '01/09/2026', mes: 'Setembro', area: 'AURORA TERMINAIS', relatorio: 'Sim', responsavel: 'Carlos / Muller', atividade: 'Manutenção corretiva, sistema de freio + lavar acumuladores de freio', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '01/09/2026', mes: 'Setembro', area: 'TRANSBRASA', relatorio: 'Sim', responsavel: 'Gabriel / Danilson', atividade: 'Manutenção preventiva de 1.000 horas KC-2', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '01/09/2026', mes: 'Setembro', area: 'MOVICTIA GUARUJÁ', relatorio: 'Sim', responsavel: 'João Maurício / Danilson', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '01/09/2026', mes: 'Setembro', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Davi / Leandro', atividade: 'Manutenção preventiva de 1.000 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '02/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Galacho / Matheus', atividade: 'Efetuar a montagem do LS90 + limpeza do chassi', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '02/09/2026', mes: 'Setembro', area: 'MOVICTIA GUARUJÁ', relatorio: 'Sim', responsavel: 'Galacho / Gelaischi', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '02/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira', atividade: 'Revisar e montar chicote da cabine e acessórios', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '02/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Gabriel / Matheus', atividade: 'Efetuar a montagem do LS90 + retirar mancal da lança LE', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '02/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos / Danilson', atividade: 'Desmontar o condensador e efetuar a pertagem, filtro secador e limpeza da evapoperadora', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '02/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos / Muller', atividade: 'Efetuar avaliação das bombas recondicionadas para envio de reparação + visita no Platini para acompanhar os serviços', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '02/09/2026', mes: 'Setembro', area: 'TRANSTEC', relatorio: 'Sim', responsavel: 'Davi / Muller', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Foram fazer inspeção DINAMO alemoa e CGM. O cliente cancelou a preventiva'},
+            {data: '02/09/2026', mes: 'Setembro', area: 'SANTOS BRASIL', relatorio: 'Sim', responsavel: 'Davi', atividade: 'Retirar as amarras de pneu - TERBRFG', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '02/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos / Muller', atividade: 'Retirar o cilindro da quinta roda do Terberg', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '03/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira', atividade: 'Revisar o montar chicote da cabine e acessórios', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '03/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Gabriel / Matheus', atividade: 'Efetuar a retirada das bombas hidráulicas do equipamento para a bancada', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '03/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'João Maurício', atividade: 'Retornar o óleo hidráulico para o equipamento, utilizar a bomba comprada para fazermos os testes + abastecer o IBC com o óleo hidráulico', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '03/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Danilson', atividade: 'Desmontar o condensador e efetuar a pertagem e filtro secador + revisar as mangueiras', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '03/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Gabriel', atividade: 'Fazer ensaio LP do mancal traseiro da lança, caso seja tenha trinca, realizar a montagem', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '03/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Leandro', atividade: 'preparar e eixo da balança "oficina externo" + preparar o eixo da manga da balança "oficina interna" + fazer SS na oficina', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '03/09/2026', mes: 'Setembro', area: 'TRANSTEC', relatorio: 'Sim', responsavel: 'Leandro', atividade: 'Realizar atendimento na Transtec "vazamento pela conexão"', previsto: 4, executado: 4, status: 'Concluído', motivo: ''},
+            {data: '04/09/2026', mes: 'Setembro', area: 'TRANSBRASA', relatorio: 'Sim', responsavel: 'Davi / Muller', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '04/09/2026', mes: 'Setembro', area: 'TRANSBRASA', relatorio: 'Sim', responsavel: 'Gabriel / Danilson', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '04/09/2026', mes: 'Setembro', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Galacho / Matheus', atividade: 'Manutenção preventiva de 1.000 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '04/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira', atividade: 'Montagem dos acessórios de dentro da cabine', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '04/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Dácio / João Maurício', atividade: 'Realizar a montagem do mancal da lança', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '04/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos / Muller', atividade: 'Desmontagem e pentagem das bombas hidráulicas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '05/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos', atividade: 'Manutenção preventiva de 2.000 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '05/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira', atividade: 'Montagem dos acessórios de dentro da cabine', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '05/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Galacho / Muller', atividade: 'Montar o cubo da roda', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '09/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos', atividade: 'Peritagem e montagem das bombas hidráulicas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '09/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'João Maurício / Matheus', atividade: 'Preparação da lança fixa para pintura', previsto: 8, executado: 0, status: 'Não executado', motivo: 'Choveu bastante'},
+            {data: '09/09/2026', mes: 'Setembro', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Gabriel / Danilson', atividade: 'Continuação Manutenção preventiva de 2.000 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '10/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira', atividade: 'Montagem dos acessórios de dentro da cabine', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '10/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Carlos / Muller', atividade: 'Peritagens e montagem das bombas hidráulicas', previsto: 4, executado: 4, status: 'Concluído', motivo: ''},
+            {data: '10/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Galacho / Muller', atividade: 'Finalizar montagem das bombas hidráulicas', previsto: 4, executado: 4, status: 'Concluído', motivo: ''},
+            {data: '10/09/2026', mes: 'Setembro', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Davi / Matheus', atividade: 'retirada das lubrificantes para a preventiva da EQP003 + fazer SS no almoxarifado externo', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '10/09/2026', mes: 'Setembro', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Flávio / Gabriel', atividade: 'Substituir os módulos do spreader "garantia" E-402', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '10/09/2026', mes: 'Setembro', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Carlos / Gabriel', atividade: 'Substituir os módulos do spreader "garantia" E-403', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '11/09/2026', mes: 'Setembro', area: 'DELLA VOLPE', relatorio: 'Sim', responsavel: 'Davi / Matheus', atividade: 'Inspeção de rotina', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '11/09/2026', mes: 'Setembro', area: 'DINAMO ANCHIETA', relatorio: 'Sim', responsavel: 'Davi / Matheus', atividade: 'Inspeção de rotina', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '11/09/2026', mes: 'Setembro', area: 'DINAMO ALEMOA', relatorio: 'Sim', responsavel: 'Davi / Matheus', atividade: 'Inspeção de rotina', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '11/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Pereira / Galacho', atividade: 'Montagem dos acessórios de dentro da cabine', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '11/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Gabriel / Matheus', atividade: 'Montagem das bombas hidráulicas, mangueiras e agregados', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '11/09/2026', mes: 'Setembro', area: 'EQUIPORT', relatorio: 'Não', responsavel: 'Dácio / Danilson', atividade: 'Término da montagem dos armários', previsto: 8, executado: 8, status: 'Concluído', motivo: ''}
+        ];
+
+        window.showToast = function(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        window.getWeekLabel = function(dateString) {
+            if (!dateString) return "";
+            const parts = String(dateString).split('/');
+            if(parts.length !== 3) return "Data Inválida";
+            const d = new Date(parts[2], parts[1] - 1, parts[0]);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(d.getFullYear(), d.getMonth(), diff);
+            const sunday = new Date(monday.valueOf());
+            sunday.setDate(monday.getDate() + 6);
+            const format = (date) => String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0');
+            return `${format(monday)} a ${format(sunday)}`;
+        }
+
+        window.enrichData = function(items) {
+            items.forEach(item => {
+                let text = (item.atividade || "").toLowerCase();
+                if (text.includes('preventiva')) item.categoria = "Manutenção Preventiva";
+                else if (text.includes('preditiva')) item.categoria = "Manutenção Preditiva";
+                else if (text.includes('inspeç') || text.includes('avaliar') || text.includes('revisar')) item.categoria = "Inspeção / Avaliação";
+                else if (text.includes('montagem') || text.includes('fixaç') || text.includes('substituir')) item.categoria = "Montagem / Troca";
+                else item.categoria = "Corretiva / Outros";
+
+                item.semana = getWeekLabel(item.data);
+                if(!item.status) item.status = (Number(item.executado) > 0) ? "Concluído" : "Não executado";
+                if(item.motivo && (String(item.motivo).toLowerCase() === 'concluído' || String(item.motivo).toLowerCase() === 'true')) {
+                    item.motivo = '';
+                }
+            });
+        }
+
+        window.initializeFilters = function() {
+            const meses = [...new Set(rawData.map(item => item.mes).filter(m => m && m !== ""))].sort();
+            const mercados = [...new Set(rawData.map(item => item.area).filter(a => a))].sort();
+            const categorias = [...new Set(rawData.map(item => item.categoria).filter(c => c))].sort();
+
+            const parseFirstDate = str => {
+                if(!str || str === "Data Inválida") return 99999999;
+                const parts = str.split(' a ')[0].split('/');
+                return Number(parts[1]) * 100 + Number(parts[0]);
+            };
+            const semanas = [...new Set(rawData.map(item => item.semana).filter(s => s && s !== "Data Inválida" && s !== ""))].sort((a, b) => parseFirstDate(a) - parseFirstDate(b));
+
+            const populateSelect = (id, options) => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                const currentVal = select.value;
+                select.innerHTML = select.options[0].outerHTML; 
+                options.forEach(opt => select.add(new Option(opt, opt)));
+                select.value = currentVal;
+            };
+
+            populateSelect('filter-mes', meses);
+            populateSelect('filter-semana', semanas);
+            populateSelect('filter-mercado', mercados);
+            populateSelect('filter-categoria', categorias);
+        }
+
+        window.applyFilters = function() {
+            const mes = document.getElementById('filter-mes').value;
+            const semana = document.getElementById('filter-semana').value;
+            const mercado = document.getElementById('filter-mercado').value;
+            const categoria = document.getElementById('filter-categoria').value;
+            const status = document.getElementById('filter-status').value;
+            const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+
+            filteredData = rawData.filter(item => {
+                const matchMes = (mes === 'ALL' || item.mes === mes);
+                const matchSemana = (semana === 'ALL' || item.semana === semana);
+                const matchMercado = (mercado === 'ALL' || item.area === mercado);
+                const matchCategoria = (categoria === 'ALL' || item.categoria === categoria);
+                const matchStatus = (status === 'ALL' || item.status === status);
+                
+                const searchStr = `${item.atividade} ${item.area} ${item.responsavel} ${item.motivo}`.toLowerCase();
+                const matchSearch = (searchTerm === '' || searchStr.includes(searchTerm));
+                
+                return matchMes && matchSemana && matchMercado && matchCategoria && matchStatus && matchSearch;
+            });
+
+            updateDashboard();
+        }
+
+        window.resetFilters = function() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-mes').value = 'ALL';
+            document.getElementById('filter-semana').value = 'ALL';
+            document.getElementById('filter-mercado').value = 'ALL';
+            document.getElementById('filter-categoria').value = 'ALL';
+            document.getElementById('filter-status').value = 'ALL';
+            applyFilters();
+        }
+
+        window.updateDashboard = function() {
+            const totalAtividades = filteredData.length;
+            let previsto = 0;
+            let executado = 0;
+            let desvios = 0;
+
+            filteredData.forEach(item => {
+                previsto += Number(item.previsto) || 0;
+                executado += Number(item.executado) || 0;
+                if (item.motivo && item.motivo.trim() !== '' && item.motivo.toLowerCase() !== 'concluído') desvios++;
+            });
+
+            const aderencia = previsto > 0 ? ((executado / previsto) * 100).toFixed(1) : 0;
+
+            document.getElementById('kpi-total').innerText = totalAtividades;
+            document.getElementById('kpi-prev').innerText = previsto + 'h';
+            document.getElementById('kpi-exec').innerText = executado + 'h';
+            
+            const kpiAderencia = document.getElementById('kpi-aderencia');
+            const kpiAderenciaBar = document.getElementById('kpi-aderencia-bar');
+            kpiAderencia.innerText = aderencia + '%';
+            kpiAderenciaBar.style.width = Math.min(aderencia, 100) + '%';
+
+            kpiAderencia.classList.remove('text-green-500', 'text-yellow-500', 'text-equiport-red');
+            kpiAderenciaBar.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-equiport-red');
+            
+            if (aderencia >= 90) {
+                kpiAderencia.classList.add('text-green-500');
+                kpiAderenciaBar.classList.add('bg-green-500');
+            } else if (aderencia >= 80) {
+                kpiAderencia.classList.add('text-yellow-500');
+                kpiAderenciaBar.classList.add('bg-yellow-500');
+            } else {
+                kpiAderencia.classList.add('text-equiport-red');
+                kpiAderenciaBar.classList.add('bg-equiport-red');
+            }
+
+            document.getElementById('kpi-desvios').innerText = desvios;
+
+            updateCharts();
+            updateTable();
+        }
+
+        window.updateCharts = function() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#d1d5db' : '#4b5563';
+            const gridColor = isDark ? '#374151' : '#e5e7eb';
+            const brandColor = '#E30613';
+            const successColor = '#10B981';
+
+            const catCounts = {};
+            filteredData.forEach(i => catCounts[i.categoria] = (catCounts[i.categoria] || 0) + 1);
+            
+            if(charts.categoria) charts.categoria.destroy();
+            const ctxCat = document.getElementById('chartCategoria').getContext('2d');
+            charts.categoria = new Chart(ctxCat, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(catCounts),
+                    datasets: [{
+                        data: Object.values(catCounts),
+                        backgroundColor: ['#3b82f6', brandColor, '#f59e0b', '#8b5cf6', '#64748b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 15, font: {size: 11} } } },
+                    cutout: '70%'
+                }
+            });
+
+            const respMap = {};
+            filteredData.forEach(i => {
+                if(!i.responsavel) return;
+                if(!respMap[i.responsavel]) respMap[i.responsavel] = { prev: 0, exec: 0 };
+                respMap[i.responsavel].prev += (Number(i.previsto) || 0);
+                respMap[i.responsavel].exec += (Number(i.executado) || 0);
+            });
+            
+            const sortedResp = Object.entries(respMap).sort((a,b) => b[1].prev - a[1].prev).slice(0, 5);
+
+            if(charts.equipe) charts.equipe.destroy();
+            const ctxEqp = document.getElementById('chartEquipe').getContext('2d');
+            charts.equipe = new Chart(ctxEqp, {
+                type: 'bar',
+                data: {
+                    labels: sortedResp.map(r => r[0]),
+                    datasets: [
+                        { label: 'Previsto (h)', data: sortedResp.map(r => r[1].prev), backgroundColor: '#94a3b8' },
+                        { label: 'Executado (h)', data: sortedResp.map(r => r[1].exec), backgroundColor: successColor }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { color: textColor } },
+                        y: { grid: { display: false }, ticks: { color: textColor, font: {size: 10} } }
+                    },
+                    plugins: { legend: { labels: { color: textColor } } }
+                }
+            });
+
+            const statCounts = {};
+            filteredData.forEach(i => statCounts[i.status] = (statCounts[i.status] || 0) + 1);
+
+            if(charts.status) charts.status.destroy();
+            const ctxStat = document.getElementById('chartStatus').getContext('2d');
+            charts.status = new Chart(ctxStat, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(statCounts),
+                    datasets: [{
+                        data: Object.values(statCounts),
+                        backgroundColor: [successColor, brandColor, '#f59e0b', '#64748b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: textColor } } }
+                }
+            });
+        }
+
+        window.updateTable = function() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            document.getElementById('table-count').innerText = `${filteredData.length} registros`;
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">Nenhum registro encontrado para os filtros selecionados.</td></tr>`;
                 return;
             }
+
+            filteredData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "bg-white border-b dark:bg-equiport-card-dark dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors";
+                
+                let statusBadge = `<span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">${item.status}</span>`;
+                if(item.status === 'Concluído') statusBadge = `<span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-green-900 dark:text-green-300">${item.status}</span>`;
+                if(item.status === 'Não executado') statusBadge = `<span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">${item.status}</span>`;
+                
+                let relVal = String(item.relatorio || "").toUpperCase();
+                let relBadge = (relVal.includes('SIM') || relVal === 'TRUE' || relVal === 'S')
+                    ? `<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2.5 py-1 rounded dark:bg-blue-900 dark:text-blue-300 border border-blue-200 dark:border-blue-800"><i class="fas fa-file-signature mr-1"></i> SIM</span>`
+                    : `<span class="bg-gray-100 text-gray-500 text-[10px] font-bold px-2.5 py-1 rounded dark:bg-gray-700 dark:text-gray-400">NÃO</span>`;
+
+                let motivoText = (item.motivo && item.motivo.trim() !== '' && item.motivo.toLowerCase() !== 'concluído' && item.motivo.toLowerCase() !== 'true') ? item.motivo : '-';
+                let motivoClass = motivoText !== '-' ? 'text-equiport-red font-semibold dark:text-red-400' : 'text-gray-500 dark:text-gray-400';
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap font-medium">${item.data || ''}</td>
+                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">${item.area || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">${relBadge}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">${item.responsavel || ''}</td>
+                    <td class="px-6 py-4 text-gray-700 dark:text-gray-300">${item.atividade || ''}</td>
+                    <td class="px-6 py-4 text-center font-mono">
+                        <span class="text-gray-500">${item.previsto}</span> / <span class="font-bold text-gray-900 dark:text-white">${item.executado}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                    <td class="px-6 py-4 ${motivoClass} text-xs max-w-xs truncate" title="${motivoText}">${motivoText}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.formatExcelDate = function(excelSerialDate) {
+            if (!excelSerialDate) return "";
+            if (typeof excelSerialDate === 'string') return excelSerialDate;
+            const date = new Date((excelSerialDate - (25567 + 2)) * 86400 * 1000);
+            if (isNaN(date.getTime())) return String(excelSerialDate);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        window.requestPasswordForAction = function(actionType) {
+            pendingAction = actionType;
+            document.getElementById('admin-password-input').value = '';
+            document.getElementById('password-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('admin-password-input').focus(), 100);
+        }
+
+        window.closePasswordModal = function() {
+            document.getElementById('password-modal').classList.add('hidden');
+            pendingAction = null;
+        }
+
+        window.confirmAdminAction = async function() {
+            const pwd = document.getElementById('admin-password-input').value;
+            if (pwd === ADMIN_PASSWORD) {
+                const action = pendingAction;
+                closePasswordModal();
+
+                if (action === 'import') {
+                    document.getElementById('fileInput').click();
+                } else if (action === 'export') {
+                    exportToExcel();
+                } else if (action === 'resetData') {
+                    if (confirm("Tem certeza que deseja restaurar os dados originais?")) {
+                        rawData = [...defaultRawData];
+                        enrichData(rawData);
+                        await saveToCloud(rawData);
+                        initializeFilters();
+                        applyFilters();
+                        showToast("Dados originais restaurados na nuvem!");
+                    }
+                }
+            } else {
+                showToast("Senha de administrador incorreta!");
+            }
+        }
+
+        window.handleFileSelected = async function(e) {
             const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(evt) {
+            reader.onload = async function(e) {
                 try {
-                    const data = new Uint8Array(evt.target.result);
+                    const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet);
+                    const jsonRows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
                     
-                    if(json.length === 0) {
-                        alert("A planilha está vazia ou em formato incompatível.");
-                        return;
-                    }
+                    if(jsonRows.length > 1) {
+                        const newRawData = [];
+                        let headerRowIdx = 0;
+                        for(let i=0; i<Math.min(5, jsonRows.length); i++) {
+                            const rStr = JSON.stringify(jsonRows[i]).toLowerCase();
+                            if(rStr.includes('data') || rStr.includes('área') || rStr.includes('atividade')) {
+                                headerRowIdx = i;
+                                break;
+                            }
+                        }
 
-                    localStorage.setItem('equiport_dashboard_data', JSON.stringify(json));
-                    alert("Planilha importada com sucesso e sincronizada!");
-                    location.reload();
-                } catch (err) {
-                    alert("Erro ao ler o arquivo Excel. Verifique o formato.");
+                        for (let r = headerRowIdx + 1; r < jsonRows.length; r++) {
+                            const row = jsonRows[r];
+                            if(!row || row.length === 0) continue;
+
+                            let dataRaw = row[0];
+                            let dataStr = typeof dataRaw === 'number' ? formatExcelDate(dataRaw) : (dataRaw || "");
+                            let mesVal = row[1] || "Agosto";
+                            let areaVal = row[2] || "";
+                            let relatorioVal = row[4] || "Não";
+                            let responsavelVal = row[5] || "";
+                            let atividadeVal = row[6] || "";
+
+                            if (areaVal || atividadeVal) {
+                                let previstoVal = (row[7] !== undefined && !isNaN(row[7])) ? Number(row[7]) : 8;
+                                let executadoVal = (row[8] !== undefined && !isNaN(row[8])) ? Number(row[8]) : 0;
+                                let statusVal = row[9] || (executadoVal > 0 ? "Concluído" : "Não executado");
+                                
+                                let rawMotivo = row[11] || "";
+                                let motivoVal = "";
+                                if (rawMotivo && String(rawMotivo).trim() !== '' && String(rawMotivo).toLowerCase() !== 'concluído' && String(rawMotivo).toLowerCase() !== 'true' && String(rawMotivo).toLowerCase() !== 'false') {
+                                    motivoVal = String(rawMotivo);
+                                }
+
+                                newRawData.push({
+                                    data: dataStr,
+                                    mes: mesVal,
+                                    area: areaVal,
+                                    relatorio: relatorioVal,
+                                    responsavel: responsavelVal,
+                                    atividade: String(atividadeVal),
+                                    previsto: previstoVal,
+                                    executado: executadoVal,
+                                    status: statusVal,
+                                    motivo: motivoVal
+                                });
+                            }
+                        }
+
+                        if (newRawData.length > 0) {
+                            rawData = newRawData;
+                            enrichData(rawData);
+                            await saveToCloud(rawData);
+                            initializeFilters();
+                            applyFilters();
+                            showToast(`Planilha importada e salva na nuvem! (${rawData.length} atividades)`);
+                        } else {
+                            showToast("Nenhuma linha válida encontrada na planilha.");
+                        }
+                    } else {
+                        showToast("A planilha parece estar vazia.");
+                    }
+                } catch(error) {
+                    console.error(error);
+                    showToast("Erro ao ler o arquivo Excel.");
+                } finally {
+                    document.getElementById('fileInput').value = '';
                 }
             };
             reader.readAsArrayBuffer(file);
-        });
+        }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const saved = localStorage.getItem('equiport_dashboard_data');
-            if (saved) {
-                try {
-                    dadosGlobais = JSON.parse(saved);
-                    popularFiltros(dadosGlobais);
-                    atualizarDashboard(dadosGlobais);
-                } catch(e) {
-                    console.error("Erro ao carregar dados locais");
+        window.exportToExcel = function() {
+            if(filteredData.length === 0) {
+                showToast("Não há dados para exportar com os filtros atuais.");
+                return;
+            }
+            
+            const exportFormat = filteredData.map(item => ({
+                'Data': item.data,
+                'Mês': item.mes,
+                'Semana (Auto)': item.semana,
+                'Área': item.area,
+                'Relatório necessário?': item.relatorio,
+                'Executante': item.responsavel,
+                'Atividade': item.atividade,
+                'Categoria (Auto)': item.categoria,
+                'Horas Previstas': item.previsto,
+                'Horas Executadas': item.executado,
+                'Status': item.status,
+                'Motivo Desvio': item.motivo
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(exportFormat);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Aderencia");
+            
+            const now = new Date();
+            const fileName = `Relatorio_Aderencia_EQUIPORT_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
+            
+            XLSX.writeFile(workbook, fileName);
+            showToast("Relatório Excel baixado com sucesso!");
+        }
+
+        window.toggleTheme = function() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = 'fas fa-moon';
+                text.innerText = 'Modo Escuro';
+            } else {
+                html.classList.add('dark');
+                icon.className = 'fas fa-sun';
+                text.innerText = 'Modo Claro';
+            }
+            if(charts.categoria) { updateCharts(); }
+        }
+
+        // Firebase Cloud Sync
+        async function initFirebase() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
                 }
+
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'aderencia_store');
+                
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const cloudData = docSnap.data().items;
+                        if (cloudData && Array.isArray(cloudData) && cloudData.length > 0) {
+                            rawData = cloudData;
+                            enrichData(rawData);
+                            initializeFilters();
+                            applyFilters();
+                            const now = new Date();
+                            document.getElementById('header-date').innerText = `Sincronizado da Nuvem: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+                        }
+                    } else {
+                        saveToCloud(defaultRawData);
+                    }
+                }, (error) => {
+                    console.error("Erro na escuta da nuvem:", error);
+                    loadLocalFallback();
+                });
+
+            } catch (err) {
+                console.warn("Modo offline / erro no Firebase, usando armazenamento local:", err);
+                loadLocalFallback();
             }
-        });
-
-        function popularFiltros(dados) {
-            const meses = [...new Set(dados.map(item => item.Mês || item.Mes || item.DATA || ''))].filter(Boolean);
-            const areas = [...new Set(dados.map(item => item.Área || item.Area || ''))].filter(Boolean);
-            const categorias = [...new Set(dados.map(item => item.Categoria || ''))].filter(Boolean);
-            const statusList = [...new Set(dados.map(item => item.Status || ''))].filter(Boolean);
-
-            preencherSelect('filtro-mes', meses);
-            preencherSelect('filtro-area', areas);
-            preencherSelect('filtro-categoria', categorias);
-            preencherSelect('filtro-status', statusList);
         }
 
-        function preencherSelect(id, valores) {
-            const select = document.getElementById(id);
-            valores.forEach(val => {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.text = val;
-                select.appendChild(opt);
-            });
-        }
-
-        function aplicarFiltros() {
-            const mes = document.getElementById('filtro-mes').value;
-            const area = document.getElementById('filtro-area').value;
-            const categoria = document.getElementById('filtro-categoria').value;
-            const status = document.getElementById('filtro-status').value;
-
-            let filtrados = dadosGlobais.filter(item => {
-                let matchMes = !mes || (item.Mês || item.Mes || item.DATA) == mes;
-                let matchArea = !area || (item.Área || item.Area) == area;
-                let matchCat = !categoria || item.Categoria == categoria;
-                let matchStatus = !status || item.Status == status;
-                return matchMes && matchArea && matchCat && matchStatus;
-            });
-
-            atualizarDashboard(filtrados);
-        }
-
-        function limparFiltros() {
-            document.getElementById('filtro-mes').value = '';
-            document.getElementById('filtro-area').value = '';
-            document.getElementById('filtro-categoria').value = '';
-            document.getElementById('filtro-status').value = '';
-            atualizarDashboard(dadosGlobais);
-        }
-
-        function atualizarDashboard(dados) {
-            document.getElementById('stat-total').innerText = dados.length;
-            document.getElementById('contador-registros').innerText = dados.length + " registros";
-
-            let totalPrev = 0, totalExec = 0, desvios = 0, aderentes = 0;
-            let catCount = {}, execCount = {}, statusCount = {};
-
-            let htmlTabela = '';
-            dados.forEach(item => {
-                let p = parseFloat(item.Previstas || item.Horas_Prev || item.Prev || 8) || 8;
-                let ex = parseFloat(item.Executadas || item.Horas_Exec || item.Exec || 8) || 8;
-                totalPrev += p;
-                totalExec += ex;
-
-                let st = item.Status || 'Concluído';
-                if(st.toLowerCase().includes('desvio') || st.toLowerCase().includes('não')) desvios++;
-                if(st.toLowerCase().includes('concluído') || st.toLowerCase().includes('sim')) aderentes++;
-
-                let cat = item.Categoria || 'Geral';
-                catCount[cat] = (catCount[cat] || 0) + 1;
-
-                let exName = item.Executante || item.Responsável || 'Equipe';
-                execCount[exName] = (execCount[exName] || 0) + 1;
-
-                statusCount[st] = (statusCount[st] || 0) + 1;
-
-                htmlTabela += `
-                    <tr class="hover:bg-gray-800/50 transition">
-                        <td class="p-4">${item.Data || item.DATA || '-'}</td>
-                        <td class="p-4">${item.Área || item.Area || '-'}</td>
-                        <td class="p-4"><span class="px-2 py-1 rounded text-xs bg-blue-500/10 text-blue-400">${item.Relatório || item.Relatorio || 'SIM'}</span></td>
-                        <td class="p-4">${exName}</td>
-                        <td class="p-4">${item.Atividade || item.Descrição || '-'}</td>
-                        <td class="p-4">${p}h / ${exh = ex}h</td>
-                        <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500/10 text-green-400">${st}</span></td>
-                        <td class="p-4 text-gray-500">${item.Motivo || '-'}</td>
-                    </tr>
-                `;
-            });
-
-            if(dados.length === 0) {
-                htmlTabela = `<tr><td colspan="8" class="p-8 text-center text-gray-500">Nenhum registro encontrado com os filtros selecionados.</td></tr>`;
+        async function saveToCloud(items) {
+            try {
+                if (!db || !auth.currentUser) {
+                    localStorage.setItem('equiport_aderencia_data_v11', JSON.stringify(items));
+                    return;
+                }
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'aderencia_store');
+                await setDoc(docRef, { items: items, updatedAt: new Date().toISOString() });
+            } catch (e) {
+                console.error("Erro ao salvar na nuvem:", e);
+                localStorage.setItem('equiport_aderencia_data_v11', JSON.stringify(items));
             }
-
-            document.getElementById('tabela-dados').innerHTML = htmlTabela;
-            document.getElementById('stat-horas').innerText = `${totalPrev}h / ${totalExec}h`;
-            let taxa = dados.length > 0 ? ((aderentes / dados.length) * 100).toFixed(1) : 0;
-            document.getElementById('stat-aderencia').innerText = taxa + '%';
-            document.getElementById('stat-desvios').innerText = desvios;
-
-            renderizarGraficos(catCount, execCount, statusCount);
         }
 
-        function renderizarGraficos(catCount, execCount, statusCount) {
-            if(chartCat) chartCat.destroy();
-            if(chartExec) chartExec.destroy();
-            if(chartStatus) chartStatus.destroy();
-
-            const ctxCat = document.getElementById('chartCategoria').getContext('2d');
-            chartCat = new Chart(ctxCat, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(catCount).length ? Object.keys(catCount) : ['Preventiva', 'Preditiva', 'Corretiva'],
-                    datasets: [{
-                        data: Object.keys(catCount).length ? Object.values(catCount) : [50, 30, 20],
-                        backgroundColor: ['#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#10b981']
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', boxWidth: 12 } } } }
-            });
-
-            const ctxExec = document.getElementById('chartExecutante').getContext('2d');
-            chartExec = new Chart(ctxExec, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(execCount).length ? Object.keys(execCount) : ['Equipe 1', 'Equipe 2'],
-                    datasets: [{
-                        label: 'Atividades',
-                        data: Object.keys(execCount).length ? Object.values(execCount) : [10, 15],
-                        backgroundColor: '#10b981',
-                        borderRadius: 6
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#9ca3af' } }, y: { ticks: { color: '#9ca3af' } } }, plugins: { legend: { display: false } } }
-            });
-
-            const ctxStatus = document.getElementById('chartStatus').getContext('2d');
-            chartStatus = new Chart(ctxStatus, {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(statusCount).length ? Object.keys(statusCount) : ['Concluído', 'Pendente'],
-                    datasets: [{
-                        data: Object.keys(statusCount).length ? Object.values(statusCount) : [80, 20],
-                        backgroundColor: ['#10b981', '#ef4444']
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', boxWidth: 12 } } } }
-            });
+        function loadLocalFallback() {
+            try {
+                const saved = localStorage.getItem('equiport_aderencia_data_v11');
+                if (saved) {
+                    rawData = JSON.parse(saved);
+                } else {
+                    rawData = [...defaultRawData];
+                }
+            } catch(e) {
+                rawData = [...defaultRawData];
+            }
+            enrichData(rawData);
+            initializeFilters();
+            applyFilters();
         }
+
+        window.onload = () => {
+            initFirebase();
+        };
     </script>
 </body>
 </html>
