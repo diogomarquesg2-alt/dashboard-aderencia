@@ -49,6 +49,9 @@
         }
         #toast.show { visibility: visible; opacity: 1; }
         .dark #toast { background-color: #4ade80; color: #151826; font-weight: 600; }
+        
+        /* Cor de destaque para os checkboxes */
+        .checkbox-equiport { accent-color: #E30613; }
     </style>
 </head>
 
@@ -107,11 +110,19 @@
                 </select>
             </div>
 
-            <div class="mb-4">
-                <label for="filter-mercado" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Área</label>
-                <select id="filter-mercado" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
-                    <option value="ALL">Todas as Áreas</option>
-                </select>
+            <!-- COMPONENTE DROPDOWN CUSTOMIZADO DE ÁREA -->
+            <div class="mb-4 relative" id="mercado-container">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Área</label>
+                <div onclick="toggleDropdown('mercado-dropdown')" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg flex items-center justify-between p-2.5 cursor-pointer dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors hover:border-gray-400 dark:hover:border-gray-500">
+                    <span id="mercado-dropdown-text" class="truncate select-none pointer-events-none">Todas as Áreas</span>
+                    <i class="fas fa-chevron-down text-gray-400 text-xs pointer-events-none"></i>
+                </div>
+                <!-- Lista Suspensa -->
+                <div id="mercado-dropdown" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-600 max-h-48 overflow-y-auto">
+                    <div class="p-2 space-y-1" id="mercado-checkbox-list">
+                        <!-- Gerado via JavaScript -->
+                    </div>
+                </div>
             </div>
 
             <div class="mb-4">
@@ -163,6 +174,9 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400" id="header-date">Sincronizado na Nuvem em tempo real</p>
             </div>
             <div class="flex space-x-3 items-center">
+                <!-- BADGE DE VERSÃO AQUI -->
+                <span id="app-version-badge" class="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[10px] font-bold px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-700 select-none">v0.0</span>
+                
                 <button onclick="requestPasswordForAction('export')" class="bg-equiport-red hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
                     <i class="fas fa-download mr-2"></i> Exportar <i class="fas fa-lock text-[10px] ml-2"></i>
                 </button>
@@ -268,7 +282,7 @@
             </div>
             
             <footer class="mt-8 text-center text-xs text-gray-400 pb-4">
-                &copy; 2026 EQUIPORT Equipamentos para Portos. Todos os direitos reservados.
+                &copy; 2026 EQUIPORT Equipamentos para Portos. Todos os direitos reservados. &bull; Versão <span id="app-version-footer">0.0</span>
             </footer>
         </div>
     </main>
@@ -279,12 +293,17 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // ==========================================
+        // CONFIGURAÇÕES GERAIS DO SISTEMA
+        // ==========================================
+        const APP_VERSION = "1.2"; // <-- ATUALIZE AQUI NAS PRÓXIMAS REVISÕES!
         const ADMIN_PASSWORD = "equiport2026";
-        let pendingAction = null;
-
         const appId = 'equiport-aderencia-v1';
+        // ==========================================
+
+        let pendingAction = null;
         
-        // Suas chaves oficiais do Firebase inseridas corretamente aqui:
+        // Suas chaves oficiais do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBxfDptYS8z4aGBPLI9FSboBQvxdoSzKTA",
             authDomain: "equiport-aderencia.firebaseapp.com",
@@ -340,6 +359,53 @@
             });
         }
 
+        // --- FUNÇÕES DE CONTROLO DO DROPDOWN CUSTOMIZADO ---
+        window.toggleDropdown = function(id) {
+            const dropdown = document.getElementById(id);
+            dropdown.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('mercado-container');
+            const dropdown = document.getElementById('mercado-dropdown');
+            if (container && dropdown && !container.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        window.handleMercadoChange = function(checkbox) {
+            const checkboxes = document.querySelectorAll('.mercado-cb');
+            const allCb = document.querySelector('.mercado-cb[value="ALL"]');
+            const individualCbs = Array.from(checkboxes).filter(cb => cb.value !== 'ALL');
+            
+            if (checkbox.value === 'ALL') {
+                individualCbs.forEach(cb => { cb.checked = checkbox.checked; });
+            } else {
+                const allChecked = individualCbs.every(cb => cb.checked);
+                if (allCb) allCb.checked = allChecked;
+            }
+
+            updateMercadoText();
+            applyFilters();
+        }
+
+        window.updateMercadoText = function() {
+            const checkboxes = document.querySelectorAll('.mercado-cb');
+            const individualCbs = Array.from(checkboxes).filter(cb => cb.value !== 'ALL');
+            const checkedIndividual = individualCbs.filter(cb => cb.checked);
+            const allCb = document.querySelector('.mercado-cb[value="ALL"]');
+            const textEl = document.getElementById('mercado-dropdown-text');
+            
+            if ((allCb && allCb.checked) || checkedIndividual.length === 0) {
+                textEl.innerText = "Todas as Áreas";
+            } else if (checkedIndividual.length === 1) {
+                textEl.innerText = checkedIndividual[0].value;
+            } else {
+                textEl.innerText = `${checkedIndividual.length} áreas selecionadas`;
+            }
+        }
+        // ----------------------------------------------------
+
         window.initializeFilters = function() {
             const meses = [...new Set(rawData.map(item => item.mes).filter(m => m && m !== ""))].sort();
             const mercados = [...new Set(rawData.map(item => item.area).filter(a => a))].sort();
@@ -363,25 +429,50 @@
 
             populateSelect('filter-mes', meses);
             populateSelect('filter-semana', semanas);
-            populateSelect('filter-mercado', mercados);
             populateSelect('filter-categoria', categorias);
+
+            const mercadoList = document.getElementById('mercado-checkbox-list');
+            if (mercadoList) {
+                let currentChecks = Array.from(document.querySelectorAll('.mercado-cb:checked')).map(cb => cb.value);
+                if (currentChecks.length === 0) currentChecks = ['ALL'];
+                const isAllChecked = currentChecks.includes('ALL');
+
+                let html = `
+                    <label class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                        <input type="checkbox" value="ALL" class="mercado-cb checkbox-equiport w-4 h-4 bg-gray-100 border-gray-300 rounded cursor-pointer dark:bg-gray-700 dark:border-gray-500" onchange="handleMercadoChange(this)" ${isAllChecked ? 'checked' : ''}>
+                        <span class="ml-2 text-sm font-semibold text-gray-900 dark:text-gray-200">Todas as Áreas</span>
+                    </label>
+                `;
+                
+                mercados.forEach(mercado => {
+                    const isChecked = (isAllChecked || currentChecks.includes(mercado)) ? 'checked' : '';
+                    html += `
+                        <label class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                            <input type="checkbox" value="${mercado}" class="mercado-cb checkbox-equiport w-4 h-4 bg-gray-100 border-gray-300 rounded cursor-pointer dark:bg-gray-700 dark:border-gray-500" onchange="handleMercadoChange(this)" ${isChecked}>
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">${mercado}</span>
+                        </label>
+                    `;
+                });
+                mercadoList.innerHTML = html;
+                updateMercadoText();
+            }
         }
 
         window.applyFilters = function() {
             const mes = document.getElementById('filter-mes').value;
             const semana = document.getElementById('filter-semana').value;
-            const mercado = document.getElementById('filter-mercado').value;
             const categoria = document.getElementById('filter-categoria').value;
             const status = document.getElementById('filter-status').value;
             const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
 
+            const mercadosSelecionados = Array.from(document.querySelectorAll('.mercado-cb:checked')).map(cb => cb.value);
+
             filteredData = rawData.filter(item => {
                 const matchMes = (mes === 'ALL' || item.mes === mes);
                 const matchSemana = (semana === 'ALL' || item.semana === semana);
-                const matchMercado = (mercado === 'ALL' || item.area === mercado);
+                const matchMercado = (mercadosSelecionados.includes('ALL') || mercadosSelecionados.length === 0 || mercadosSelecionados.includes(item.area));
                 const matchCategoria = (categoria === 'ALL' || item.categoria === categoria);
                 const matchStatus = (status === 'ALL' || item.status === status);
-                
                 const searchStr = `${item.atividade} ${item.area} ${item.responsavel} ${item.motivo}`.toLowerCase();
                 const matchSearch = (searchTerm === '' || searchStr.includes(searchTerm));
                 
@@ -395,9 +486,13 @@
             document.getElementById('search-input').value = '';
             document.getElementById('filter-mes').value = 'ALL';
             document.getElementById('filter-semana').value = 'ALL';
-            document.getElementById('filter-mercado').value = 'ALL';
             document.getElementById('filter-categoria').value = 'ALL';
             document.getElementById('filter-status').value = 'ALL';
+
+            const checkboxes = document.querySelectorAll('.mercado-cb');
+            checkboxes.forEach(cb => { cb.checked = true; });
+            updateMercadoText();
+
             applyFilters();
         }
 
@@ -796,7 +891,16 @@
             }
         }
 
-        window.onload = () => { initFirebase(); };
+        // ==========================================
+        // INICIALIZAÇÃO DA PÁGINA E VERSÃO
+        // ==========================================
+        window.onload = () => { 
+            // Atualiza a interface gráfica com a versão configurada no início do código
+            document.getElementById('app-version-badge').innerText = 'v' + APP_VERSION;
+            document.getElementById('app-version-footer').innerText = APP_VERSION;
+            
+            initFirebase(); 
+        };
     </script>
 </body>
 </html>
