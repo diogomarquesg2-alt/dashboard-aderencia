@@ -50,8 +50,8 @@
         #toast.show { visibility: visible; opacity: 1; }
         .dark #toast { background-color: #4ade80; color: #151826; font-weight: 600; }
         
-        /* Cor de destaque para os checkboxes */
         .checkbox-equiport { accent-color: #E30613; }
+        .dark input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.7; cursor: pointer; }
     </style>
 </head>
 
@@ -74,7 +74,6 @@
 
     <aside class="w-72 bg-white dark:bg-equiport-dark-bg border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shadow-lg z-10 transition-colors">
         
-        <!-- Logo EQUIPORT em Vetor (SVG) -->
         <div class="h-20 flex items-center justify-center border-b border-gray-200 dark:border-gray-700 bg-black p-3">
             <svg viewBox="0 0 420 120" class="w-full h-full max-h-14" preserveAspectRatio="xMidYMid meet">
                 <path d="M 35,20 L 105,25 L 45,60 Z" fill="none" stroke="#E30613" stroke-width="4" />
@@ -110,18 +109,19 @@
                 </select>
             </div>
 
-            <!-- COMPONENTE DROPDOWN CUSTOMIZADO DE ÁREA -->
+            <div class="mb-4">
+                <label for="filter-dia" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dia Específico</label>
+                <input type="date" id="filter-dia" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 transition-colors">
+            </div>
+
             <div class="mb-4 relative" id="mercado-container">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Área</label>
                 <div onclick="toggleDropdown('mercado-dropdown')" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg flex items-center justify-between p-2.5 cursor-pointer dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors hover:border-gray-400 dark:hover:border-gray-500">
                     <span id="mercado-dropdown-text" class="truncate select-none pointer-events-none">Todas as Áreas</span>
                     <i class="fas fa-chevron-down text-gray-400 text-xs pointer-events-none"></i>
                 </div>
-                <!-- Lista Suspensa -->
                 <div id="mercado-dropdown" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-600 max-h-48 overflow-y-auto">
-                    <div class="p-2 space-y-1" id="mercado-checkbox-list">
-                        <!-- Gerado via JavaScript -->
-                    </div>
+                    <div class="p-2 space-y-1" id="mercado-checkbox-list"></div>
                 </div>
             </div>
 
@@ -174,9 +174,7 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400" id="header-date">Sincronizado na Nuvem em tempo real</p>
             </div>
             <div class="flex space-x-3 items-center">
-                <!-- BADGE DE VERSÃO -->
                 <span id="app-version-badge" class="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[10px] font-bold px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-700 select-none">v0.0</span>
-                
                 <button onclick="requestPasswordForAction('export')" class="bg-equiport-red hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
                     <i class="fas fa-download mr-2"></i> Exportar <i class="fas fa-lock text-[10px] ml-2"></i>
                 </button>
@@ -185,14 +183,17 @@
 
         <div class="flex-1 overflow-y-auto p-8">
             
-            <!-- Cards de KPIs -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 
                 <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total de Atividades</p>
-                            <h3 class="text-3xl font-bold" id="kpi-total">0</h3>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total de Registos</p>
+                            <h3 class="text-3xl font-bold text-gray-900 dark:text-white" id="kpi-total">0</h3>
+                            <p class="text-[11px] mt-1 text-gray-500 dark:text-gray-400">
+                                <span id="kpi-rotina" class="font-bold text-blue-500">0</span> rotinas | 
+                                <span id="kpi-atend-qtd" class="font-bold text-orange-500">0</span> atendimentos
+                            </p>
                         </div>
                         <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
                             <i class="fas fa-clipboard-list text-xl"></i>
@@ -240,7 +241,6 @@
                 </div>
             </div>
 
-            <!-- Gráficos -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div class="bg-white dark:bg-equiport-card-dark p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
                     <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 uppercase tracking-wide">Desempenho por Categoria</h3>
@@ -256,12 +256,12 @@
                 </div>
             </div>
 
-            <!-- Tabela Principal -->
             <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col">
                 <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-equiport-card-dark">
                     <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Detalhamento das Atividades</h3>
-                    <span class="text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 py-1 px-3 rounded-full" id="table-count">0 registros</span>
+                    <span class="text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 py-1 px-3 rounded-full" id="table-count">0 registos</span>
                 </div>
+                
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-800/50 dark:text-gray-300">
@@ -273,11 +273,19 @@
                                 <th class="px-6 py-3">Atividade</th>
                                 <th class="px-6 py-3 text-center">Horas (Prev/Exec)</th>
                                 <th class="px-6 py-3">Status</th>
-                                <th class="px-6 py-3">Motivo Desvio</th>
+                                <th class="px-6 py-3">Motivo / Observação</th>
                             </tr>
                         </thead>
                         <tbody id="table-body"></tbody>
                     </table>
+                </div>
+                
+                <!-- NOVO: BARRA DE PAGINAÇÃO -->
+                <div class="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center bg-gray-50 dark:bg-equiport-card-dark gap-4">
+                    <span class="text-sm text-gray-500 dark:text-gray-400" id="pagination-info">Mostrando 0 a 0 de 0 registos</span>
+                    <div class="flex items-center space-x-1" id="pagination-controls">
+                        <!-- Botões gerados via JavaScript -->
+                    </div>
                 </div>
             </div>
             
@@ -296,14 +304,15 @@
         // ==========================================
         // CONFIGURAÇÕES GERAIS DO SISTEMA
         // ==========================================
-        const APP_VERSION = "1.3"; // <-- VERSÃO ATUALIZADA COM FIXES DE DATA E NOVA COLUNA DE EQUIPAMENTO
+        const APP_VERSION = "2.1"; // <-- INOVAÇÃO: Paginação inteligente implementada na tabela.
         const ADMIN_PASSWORD = "equiport2026";
         const appId = 'equiport-aderencia-v1';
         // ==========================================
 
         let pendingAction = null;
+        let currentPage = 1;         // Página inicial
+        const rowsPerPage = 15;      // Quantidade de registos visíveis por ecrã (Evita scroll infinito)
         
-        // Suas chaves oficiais do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBxfDptYS8z4aGBPLI9FSboBQvxdoSzKTA",
             authDomain: "equiport-aderencia.firebaseapp.com",
@@ -320,8 +329,7 @@
         let charts = {};
 
         const defaultRawData = [
-            {data: '17/08/2026', mes: 'Agosto', area: 'MARIMEX', equipamento: '', relatorio: 'Sim', responsavel: 'Davi / Muller', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
-            {data: '17/08/2026', mes: 'Agosto', area: 'TRANSBRASA', equipamento: '', relatorio: 'Sim', responsavel: 'Davi / Danilson', atividade: 'Manutenção preditiva de 750 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''}
+            {data: '17/08/2026', mes: 'Agosto', area: 'MARIMEX', equipamento: '', relatorio: 'Sim', responsavel: 'Davi / Muller', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''}
         ];
 
         window.showToast = function(message) {
@@ -352,14 +360,19 @@
                 else if (text.includes('preditiva')) item.categoria = "Manutenção Preditiva";
                 else if (text.includes('inspeç') || text.includes('avaliar') || text.includes('revisar')) item.categoria = "Inspeção / Avaliação";
                 else if (text.includes('montagem') || text.includes('fixaç') || text.includes('substituir')) item.categoria = "Montagem / Troca";
+                else if (text.includes('corretiva') || text.includes('atendimento') || text.includes('emergência')) item.categoria = "Atendimento Corretivo";
                 else item.categoria = "Corretiva / Outros";
 
                 item.semana = getWeekLabel(item.data);
-                if(!item.status) item.status = (Number(item.executado) > 0) ? "Concluído" : "Não executado";
+                
+                if(String(item.status).toLowerCase().trim() === 'não executado' && Number(item.executado) > 0) {
+                    item.status = "Concluído";
+                } else if(!item.status) {
+                    item.status = (Number(item.executado) > 0) ? "Concluído" : "Não executado";
+                }
             });
         }
 
-        // --- FUNÇÕES DE CONTROLO DO DROPDOWN CUSTOMIZADO ---
         window.toggleDropdown = function(id) {
             const dropdown = document.getElementById(id);
             dropdown.classList.toggle('hidden');
@@ -404,7 +417,6 @@
                 textEl.innerText = `${checkedIndividual.length} áreas selecionadas`;
             }
         }
-        // ----------------------------------------------------
 
         window.initializeFilters = function() {
             const meses = [...new Set(rawData.map(item => item.mes).filter(m => m && m !== ""))].sort();
@@ -459,8 +471,18 @@
         }
 
         window.applyFilters = function() {
+            currentPage = 1; // Ao filtrar, volta sempre para a primeira página
+
             const mes = document.getElementById('filter-mes').value;
             const semana = document.getElementById('filter-semana').value;
+            
+            const diaRaw = document.getElementById('filter-dia').value;
+            let diaFormatado = 'ALL';
+            if (diaRaw) {
+                const parts = diaRaw.split('-');
+                diaFormatado = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+
             const categoria = document.getElementById('filter-categoria').value;
             const status = document.getElementById('filter-status').value;
             const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
@@ -470,6 +492,7 @@
             filteredData = rawData.filter(item => {
                 const matchMes = (mes === 'ALL' || item.mes === mes);
                 const matchSemana = (semana === 'ALL' || item.semana === semana);
+                const matchDia = (diaFormatado === 'ALL' || item.data === diaFormatado);
                 const matchMercado = (mercadosSelecionados.includes('ALL') || mercadosSelecionados.length === 0 || mercadosSelecionados.includes(item.area));
                 const matchCategoria = (categoria === 'ALL' || item.categoria === categoria);
                 const matchStatus = (status === 'ALL' || item.status === status);
@@ -477,7 +500,7 @@
                 const searchStr = `${item.atividade} ${item.area} ${item.equipamento || ''} ${item.responsavel} ${item.motivo}`.toLowerCase();
                 const matchSearch = (searchTerm === '' || searchStr.includes(searchTerm));
                 
-                return matchMes && matchSemana && matchMercado && matchCategoria && matchStatus && matchSearch;
+                return matchMes && matchSemana && matchDia && matchMercado && matchCategoria && matchStatus && matchSearch;
             });
 
             updateDashboard();
@@ -487,6 +510,7 @@
             document.getElementById('search-input').value = '';
             document.getElementById('filter-mes').value = 'ALL';
             document.getElementById('filter-semana').value = 'ALL';
+            document.getElementById('filter-dia').value = '';
             document.getElementById('filter-categoria').value = 'ALL';
             document.getElementById('filter-status').value = 'ALL';
 
@@ -498,20 +522,32 @@
         }
 
         window.updateDashboard = function() {
-            const totalAtividades = filteredData.length;
+            let qtdRotina = 0;
+            let qtdAtendimentos = 0;
             let previsto = 0;
             let executado = 0;
             let desvios = 0;
 
             filteredData.forEach(item => {
+                const isAtend = (item.categoria === 'Atendimento Corretivo');
+                
+                if (isAtend) qtdAtendimentos++;
+                else qtdRotina++;
+
                 previsto += Number(item.previsto) || 0;
                 executado += Number(item.executado) || 0;
-                if (item.motivo && item.motivo.trim() !== '' && item.motivo.toLowerCase() !== 'concluído') desvios++;
+                
+                if (!isAtend && item.motivo && item.motivo.trim() !== '' && item.motivo.toLowerCase() !== 'concluído') {
+                    desvios++;
+                }
             });
 
             const aderencia = previsto > 0 ? ((executado / previsto) * 100).toFixed(1) : 0;
 
-            document.getElementById('kpi-total').innerText = totalAtividades;
+            document.getElementById('kpi-total').innerText = filteredData.length;
+            document.getElementById('kpi-rotina').innerText = qtdRotina;
+            document.getElementById('kpi-atend-qtd').innerText = qtdAtendimentos;
+            
             document.getElementById('kpi-prev').innerText = previsto + 'h';
             document.getElementById('kpi-exec').innerText = executado + 'h';
             
@@ -558,7 +594,7 @@
                     labels: Object.keys(catCounts),
                     datasets: [{
                         data: Object.values(catCounts),
-                        backgroundColor: ['#3b82f6', brandColor, '#f59e0b', '#8b5cf6', '#64748b'],
+                        backgroundColor: ['#3b82f6', brandColor, '#f59e0b', '#8b5cf6', '#64748b', '#10B981', '#ec4899', '#06b6d4'],
                         borderWidth: 0
                     }]
                 },
@@ -572,12 +608,26 @@
             const respMap = {};
             filteredData.forEach(i => {
                 if(!i.responsavel) return;
-                if(!respMap[i.responsavel]) respMap[i.responsavel] = { prev: 0, exec: 0 };
-                respMap[i.responsavel].prev += (Number(i.previsto) || 0);
-                respMap[i.responsavel].exec += (Number(i.executado) || 0);
+                
+                if(!respMap[i.responsavel]) {
+                    respMap[i.responsavel] = { prev: 0, execRotina: 0, execAtendimento: 0, totalExec: 0 };
+                }
+                
+                const isAtendimento = (i.categoria === "Atendimento Corretivo");
+                const prevVal = Number(i.previsto) || 0;
+                const execVal = Number(i.executado) || 0;
+
+                respMap[i.responsavel].prev += prevVal;
+                respMap[i.responsavel].totalExec += execVal;
+                
+                if (isAtendimento) {
+                    respMap[i.responsavel].execAtendimento += execVal;
+                } else {
+                    respMap[i.responsavel].execRotina += execVal;
+                }
             });
             
-            const sortedResp = Object.entries(respMap).sort((a,b) => b[1].prev - a[1].prev).slice(0, 5);
+            const sortedResp = Object.entries(respMap).sort((a,b) => b[1].totalExec - a[1].totalExec).slice(0, 5);
 
             if(charts.equipe) charts.equipe.destroy();
             const ctxEqp = document.getElementById('chartEquipe').getContext('2d');
@@ -586,8 +636,9 @@
                 data: {
                     labels: sortedResp.map(r => r[0]),
                     datasets: [
-                        { label: 'Previsto (h)', data: sortedResp.map(r => r[1].prev), backgroundColor: '#94a3b8' },
-                        { label: 'Executado (h)', data: sortedResp.map(r => r[1].exec), backgroundColor: successColor }
+                        { label: 'Programado (h)', data: sortedResp.map(r => r[1].prev), backgroundColor: '#94a3b8' },
+                        { label: 'Executado Rotina (h)', data: sortedResp.map(r => r[1].execRotina), backgroundColor: successColor },
+                        { label: 'Atendimentos (h)', data: sortedResp.map(r => r[1].execAtendimento), backgroundColor: '#f97316' }
                     ]
                 },
                 options: {
@@ -602,17 +653,37 @@
             });
 
             const statCounts = {};
-            filteredData.forEach(i => statCounts[i.status] = (statCounts[i.status] || 0) + 1);
+            filteredData.forEach(i => {
+                let statusBase = String(i.status).trim();
+                
+                if (statusBase.toLowerCase() === 'concluído') {
+                    if (i.categoria === 'Atendimento Corretivo') {
+                        statCounts['Concluído (Atendimento)'] = (statCounts['Concluído (Atendimento)'] || 0) + 1;
+                    } else {
+                        statCounts['Concluído (Rotina)'] = (statCounts['Concluído (Rotina)'] || 0) + 1;
+                    }
+                } else {
+                    statCounts[statusBase] = (statCounts[statusBase] || 0) + 1;
+                }
+            });
+
+            const statLabels = Object.keys(statCounts);
+            const statColors = statLabels.map(label => {
+                if(label === 'Concluído (Rotina)') return successColor;
+                if(label === 'Concluído (Atendimento)') return '#f97316';
+                if(label.toLowerCase() === 'não executado') return brandColor;
+                return '#f59e0b';
+            });
 
             if(charts.status) charts.status.destroy();
             const ctxStat = document.getElementById('chartStatus').getContext('2d');
             charts.status = new Chart(ctxStat, {
                 type: 'pie',
                 data: {
-                    labels: Object.keys(statCounts),
+                    labels: statLabels,
                     datasets: [{
                         data: Object.values(statCounts),
-                        backgroundColor: [successColor, brandColor, '#f59e0b', '#64748b'],
+                        backgroundColor: statColors,
                         borderWidth: 0
                     }]
                 },
@@ -623,17 +694,36 @@
             });
         }
 
+        // ==========================================
+        // LÓGICA DE PAGINAÇÃO E RENDERIZAÇÃO DA TABELA
+        // ==========================================
+        window.goToPage = function(pageNumber) {
+            currentPage = pageNumber;
+            updateTable();
+        }
+
         window.updateTable = function() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
-            document.getElementById('table-count').innerText = `${filteredData.length} registros`;
+            document.getElementById('table-count').innerText = `${filteredData.length} registos`;
 
             if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">Nenhum registro encontrado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">Nenhum registo encontrado.</td></tr>`;
+                document.getElementById('pagination-info').innerText = `Mostrando 0 a 0 de 0 registos`;
+                document.getElementById('pagination-controls').innerHTML = '';
                 return;
             }
 
-            filteredData.forEach(item => {
+            // Cálculos da paginação
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            const startIdx = (currentPage - 1) * rowsPerPage;
+            const endIdx = Math.min(startIdx + rowsPerPage, filteredData.length);
+            
+            const paginatedData = filteredData.slice(startIdx, endIdx);
+
+            paginatedData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "bg-white border-b dark:bg-equiport-card-dark dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors";
                 
@@ -647,9 +737,21 @@
                     : `<span class="bg-gray-100 text-gray-500 text-[10px] font-bold px-2.5 py-1 rounded dark:bg-gray-700 dark:text-gray-400">NÃO</span>`;
 
                 let motivoText = item.motivo ? item.motivo : '-';
-                let motivoClass = motivoText !== '-' ? 'text-equiport-red font-semibold dark:text-red-400' : 'text-gray-500 dark:text-gray-400';
+                let motivoClass = 'text-gray-500 dark:text-gray-400';
+                let motivoDisplay = motivoText;
 
-                // Etiqueta visual para o Equipamento
+                if (motivoText !== '-') {
+                    if (item.categoria === 'Atendimento Corretivo') {
+                        motivoClass = 'text-orange-500 font-semibold dark:text-orange-400';
+                        motivoDisplay = `<i class="fas fa-tools mr-1"></i> ${motivoText}`;
+                    } else if (item.status === 'Não executado' || Number(item.executado) < Number(item.previsto)) {
+                        motivoClass = 'text-equiport-red font-semibold dark:text-red-400';
+                        motivoDisplay = `<i class="fas fa-exclamation-circle mr-1"></i> ${motivoText}`;
+                    } else {
+                        motivoClass = 'text-gray-700 font-medium dark:text-gray-300';
+                    }
+                }
+
                 let equipBadge = item.equipamento && item.equipamento !== '-' 
                     ? `<span class="block mt-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-2 py-0.5 rounded w-max"><i class="fas fa-truck-monster mr-1"></i> ${item.equipamento}</span>` 
                     : '';
@@ -667,10 +769,46 @@
                         <span class="text-gray-500">${item.previsto}h</span> / <span class="font-bold text-gray-900 dark:text-white">${item.executado}h</span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                    <td class="px-6 py-4 ${motivoClass} text-xs max-w-xs truncate" title="${motivoText}">${motivoText}</td>
+                    <td class="px-6 py-4 ${motivoClass} text-xs max-w-xs truncate" title="${motivoText}">${motivoDisplay}</td>
                 `;
                 tbody.appendChild(tr);
             });
+
+            // Geração visual dos controlos de paginação
+            document.getElementById('pagination-info').innerHTML = `Mostrando <span class="font-semibold text-gray-900 dark:text-white">${startIdx + 1}</span> a <span class="font-semibold text-gray-900 dark:text-white">${endIdx}</span> de <span class="font-semibold text-gray-900 dark:text-white">${filteredData.length}</span> registos`;
+
+            let pgHtml = '';
+
+            const prevDisabled = currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer text-gray-700 dark:text-gray-300';
+            const prevClick = currentPage === 1 ? '' : `onclick="goToPage(${currentPage - 1})"`;
+            pgHtml += `<button ${prevClick} class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium transition-colors ${prevDisabled}"><i class="fas fa-chevron-left text-[10px] mr-1"></i> Ant</button>`;
+
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                pgHtml += `<button onclick="goToPage(1)" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">1</button>`;
+                if (startPage > 2) pgHtml += `<span class="px-2 py-1.5 text-gray-500">...</span>`;
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === currentPage) {
+                    pgHtml += `<button class="px-3 py-1.5 rounded-lg border border-equiport-red bg-equiport-red text-white text-sm font-medium">${i}</button>`;
+                } else {
+                    pgHtml += `<button onclick="goToPage(${i})" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">${i}</button>`;
+                }
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) pgHtml += `<span class="px-2 py-1.5 text-gray-500">...</span>`;
+                pgHtml += `<button onclick="goToPage(${totalPages})" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">${totalPages}</button>`;
+            }
+
+            const nextDisabled = currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer text-gray-700 dark:text-gray-300';
+            const nextClick = currentPage === totalPages ? '' : `onclick="goToPage(${currentPage + 1})"`;
+            pgHtml += `<button ${nextClick} class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium transition-colors ${nextDisabled}">Próx <i class="fas fa-chevron-right text-[10px] ml-1"></i></button>`;
+
+            document.getElementById('pagination-controls').innerHTML = pgHtml;
         }
 
         window.formatExcelDate = function(excelSerialDate) {
@@ -678,8 +816,6 @@
             if (typeof excelSerialDate === 'string') return excelSerialDate;
             const date = new Date((excelSerialDate - (25567 + 2)) * 86400 * 1000);
             if (isNaN(date.getTime())) return String(excelSerialDate);
-            
-            // CORREÇÃO: Utiliza UTC para evitar que o fuso horário do Brasil atrase a data em 1 dia
             return `${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCMonth() + 1).padStart(2, '0')}/${date.getUTCFullYear()}`;
         }
 
@@ -738,17 +874,18 @@
                                 jsonRows[i].forEach((cell, idx) => {
                                     if(!cell) return;
                                     const c = String(cell).toLowerCase().trim();
+                                    
                                     if(c === 'data') cols.data = idx;
                                     else if(c === 'mês' || c === 'mes') cols.mes = idx;
-                                    else if(c === 'área' || c === 'area') cols.area = idx;
+                                    else if(c === 'área' || c === 'area' || c === 'cliente') cols.area = idx;
                                     else if(c.includes('equipamento') || c.includes('frota') || c === 'eqp' || c === 'veículo') cols.equipamento = idx;
                                     else if(c.includes('relatório') || c.includes('relatorio')) cols.relatorio = idx;
                                     else if(c.includes('responsável') || c.includes('responsavel') || c.includes('executante')) cols.responsavel = idx;
                                     else if(c === 'atividade') cols.atividade = idx;
-                                    else if(c.includes('prevista') || c === 'prev') cols.previsto = idx;
-                                    else if(c.includes('executada') || c === 'exec') cols.executado = idx;
+                                    else if(c.includes('programado') || c.includes('previst') || c === 'prev') cols.previsto = idx;
+                                    else if(c.includes('executad') || c === 'exec') cols.executado = idx;
                                     else if(c === 'status') cols.status = idx;
-                                    else if(c.includes('motivo') || c.includes('desvio')) cols.motivo = idx;
+                                    else if(c.includes('motivo') || c.includes('desvio') || c.includes('observaç')) cols.motivo = idx;
                                 });
                                 break;
                             }
@@ -772,13 +909,11 @@
                             let atividadeVal = cols.atividade !== undefined ? row[cols.atividade] : (row[6] || "");
 
                             if (areaVal || atividadeVal) {
-                                // NOVO: Rastreio dinâmico e inteligente da coluna Relatório
                                 let relatorioVal = "Não";
                                 let relIndex = cols.relatorio;
                                 if (relIndex !== undefined && row[relIndex] !== undefined) {
                                     relatorioVal = row[relIndex];
                                 } else {
-                                    // Se o cabeçalho falhar, procura a palavra "Sim" ou "Não" na linha inteira para consertar sozinho
                                     for(let c=2; c<row.length; c++) {
                                         const valStr = String(row[c] || "").toLowerCase().trim();
                                         if(valStr === 'sim' || valStr === 'não' || valStr === 'nao') { 
@@ -789,12 +924,10 @@
                                     }
                                 }
 
-                                // NOVO: Captura do novo campo de Equipamento de forma segura
                                 let equipamentoVal = "";
                                 if (cols.equipamento !== undefined && row[cols.equipamento] !== undefined) {
                                     equipamentoVal = row[cols.equipamento];
                                 } else {
-                                    // Tenta adivinhar a coluna de equipamento se ela estiver entre a Área e o Relatório
                                     let areaIdx = cols.area !== undefined ? cols.area : 2;
                                     if (relIndex > areaIdx + 1) {
                                         equipamentoVal = row[areaIdx + 1] || "";
@@ -840,8 +973,8 @@
             if(filteredData.length === 0) { showToast("Sem dados para exportar."); return; }
             const exportFormat = filteredData.map(i => ({
                 'Data': i.data, 'Mês': i.mes, 'Área': i.area, 'Equipamento': i.equipamento || '', 'Relatório': i.relatorio,
-                'Executante': i.responsavel, 'Atividade': i.atividade, 'Previstas': i.previsto,
-                'Executadas': i.executado, 'Status': i.status, 'Motivo Desvio': i.motivo
+                'Executante': i.responsavel, 'Atividade': i.atividade, 'Programado': i.previsto,
+                'Executado': i.executado, 'Status': i.status, 'Observação / Desvio': i.motivo
             }));
             const ws = XLSX.utils.json_to_sheet(exportFormat);
             const wb = XLSX.utils.book_new();
@@ -931,9 +1064,6 @@
             }
         }
 
-        // ==========================================
-        // INICIALIZAÇÃO DA PÁGINA E VERSÃO
-        // ==========================================
         window.onload = () => { 
             document.getElementById('app-version-badge').innerText = 'v' + APP_VERSION;
             document.getElementById('app-version-footer').innerText = APP_VERSION;
