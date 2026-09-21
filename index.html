@@ -174,7 +174,7 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400" id="header-date">Sincronizado na Nuvem em tempo real</p>
             </div>
             <div class="flex space-x-3 items-center">
-                <!-- BADGE DE VERSÃO AQUI -->
+                <!-- BADGE DE VERSÃO -->
                 <span id="app-version-badge" class="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[10px] font-bold px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-700 select-none">v0.0</span>
                 
                 <button onclick="requestPasswordForAction('export')" class="bg-equiport-red hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
@@ -267,7 +267,7 @@
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-800/50 dark:text-gray-300">
                             <tr>
                                 <th class="px-6 py-3">Data</th>
-                                <th class="px-6 py-3">Área</th>
+                                <th class="px-6 py-3">Área / Equipamento</th>
                                 <th class="px-6 py-3 text-center">Relatório necessário?</th>
                                 <th class="px-6 py-3">Executante</th>
                                 <th class="px-6 py-3">Atividade</th>
@@ -296,7 +296,7 @@
         // ==========================================
         // CONFIGURAÇÕES GERAIS DO SISTEMA
         // ==========================================
-        const APP_VERSION = "1.2"; // <-- ATUALIZE AQUI NAS PRÓXIMAS REVISÕES!
+        const APP_VERSION = "1.3"; // <-- VERSÃO ATUALIZADA COM FIXES DE DATA E NOVA COLUNA DE EQUIPAMENTO
         const ADMIN_PASSWORD = "equiport2026";
         const appId = 'equiport-aderencia-v1';
         // ==========================================
@@ -320,8 +320,8 @@
         let charts = {};
 
         const defaultRawData = [
-            {data: '17/08/2026', mes: 'Agosto', area: 'MARIMEX', relatorio: 'Sim', responsavel: 'Davi / Muller', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
-            {data: '17/08/2026', mes: 'Agosto', area: 'TRANSBRASA', relatorio: 'Sim', responsavel: 'Davi / Danilson', atividade: 'Manutenção preditiva de 750 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''}
+            {data: '17/08/2026', mes: 'Agosto', area: 'MARIMEX', equipamento: '', relatorio: 'Sim', responsavel: 'Davi / Muller', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''},
+            {data: '17/08/2026', mes: 'Agosto', area: 'TRANSBRASA', equipamento: '', relatorio: 'Sim', responsavel: 'Davi / Danilson', atividade: 'Manutenção preditiva de 750 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''}
         ];
 
         window.showToast = function(message) {
@@ -473,7 +473,8 @@
                 const matchMercado = (mercadosSelecionados.includes('ALL') || mercadosSelecionados.length === 0 || mercadosSelecionados.includes(item.area));
                 const matchCategoria = (categoria === 'ALL' || item.categoria === categoria);
                 const matchStatus = (status === 'ALL' || item.status === status);
-                const searchStr = `${item.atividade} ${item.area} ${item.responsavel} ${item.motivo}`.toLowerCase();
+                
+                const searchStr = `${item.atividade} ${item.area} ${item.equipamento || ''} ${item.responsavel} ${item.motivo}`.toLowerCase();
                 const matchSearch = (searchTerm === '' || searchStr.includes(searchTerm));
                 
                 return matchMes && matchSemana && matchMercado && matchCategoria && matchStatus && matchSearch;
@@ -648,9 +649,17 @@
                 let motivoText = item.motivo ? item.motivo : '-';
                 let motivoClass = motivoText !== '-' ? 'text-equiport-red font-semibold dark:text-red-400' : 'text-gray-500 dark:text-gray-400';
 
+                // Etiqueta visual para o Equipamento
+                let equipBadge = item.equipamento && item.equipamento !== '-' 
+                    ? `<span class="block mt-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-2 py-0.5 rounded w-max"><i class="fas fa-truck-monster mr-1"></i> ${item.equipamento}</span>` 
+                    : '';
+
                 tr.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap font-medium">${item.data || ''}</td>
-                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">${item.area || ''}</td>
+                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">
+                        ${item.area || ''}
+                        ${equipBadge}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center">${relBadge}</td>
                     <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">${item.responsavel || ''}</td>
                     <td class="px-6 py-4 text-gray-700 dark:text-gray-300">${item.atividade || ''}</td>
@@ -669,7 +678,9 @@
             if (typeof excelSerialDate === 'string') return excelSerialDate;
             const date = new Date((excelSerialDate - (25567 + 2)) * 86400 * 1000);
             if (isNaN(date.getTime())) return String(excelSerialDate);
-            return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+            
+            // CORREÇÃO: Utiliza UTC para evitar que o fuso horário do Brasil atrase a data em 1 dia
+            return `${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCMonth() + 1).padStart(2, '0')}/${date.getUTCFullYear()}`;
         }
 
         window.requestPasswordForAction = function(actionType) {
@@ -730,6 +741,7 @@
                                     if(c === 'data') cols.data = idx;
                                     else if(c === 'mês' || c === 'mes') cols.mes = idx;
                                     else if(c === 'área' || c === 'area') cols.area = idx;
+                                    else if(c.includes('equipamento') || c.includes('frota') || c === 'eqp' || c === 'veículo') cols.equipamento = idx;
                                     else if(c.includes('relatório') || c.includes('relatorio')) cols.relatorio = idx;
                                     else if(c.includes('responsável') || c.includes('responsavel') || c.includes('executante')) cols.responsavel = idx;
                                     else if(c === 'atividade') cols.atividade = idx;
@@ -756,11 +768,39 @@
                             let dataStr = typeof dataVal === 'number' ? formatExcelDate(dataVal) : (dataVal || "");
                             let mesVal = cols.mes !== undefined ? row[cols.mes] : (row[1] || "Agosto");
                             let areaVal = cols.area !== undefined ? row[cols.area] : (row[2] || "");
-                            let relatorioVal = cols.relatorio !== undefined ? row[cols.relatorio] : (row[4] || "Não");
                             let responsavelVal = cols.responsavel !== undefined ? row[cols.responsavel] : (row[5] || "");
                             let atividadeVal = cols.atividade !== undefined ? row[cols.atividade] : (row[6] || "");
 
                             if (areaVal || atividadeVal) {
+                                // NOVO: Rastreio dinâmico e inteligente da coluna Relatório
+                                let relatorioVal = "Não";
+                                let relIndex = cols.relatorio;
+                                if (relIndex !== undefined && row[relIndex] !== undefined) {
+                                    relatorioVal = row[relIndex];
+                                } else {
+                                    // Se o cabeçalho falhar, procura a palavra "Sim" ou "Não" na linha inteira para consertar sozinho
+                                    for(let c=2; c<row.length; c++) {
+                                        const valStr = String(row[c] || "").toLowerCase().trim();
+                                        if(valStr === 'sim' || valStr === 'não' || valStr === 'nao') { 
+                                            relatorioVal = row[c]; 
+                                            relIndex = c;
+                                            break; 
+                                        }
+                                    }
+                                }
+
+                                // NOVO: Captura do novo campo de Equipamento de forma segura
+                                let equipamentoVal = "";
+                                if (cols.equipamento !== undefined && row[cols.equipamento] !== undefined) {
+                                    equipamentoVal = row[cols.equipamento];
+                                } else {
+                                    // Tenta adivinhar a coluna de equipamento se ela estiver entre a Área e o Relatório
+                                    let areaIdx = cols.area !== undefined ? cols.area : 2;
+                                    if (relIndex > areaIdx + 1) {
+                                        equipamentoVal = row[areaIdx + 1] || "";
+                                    }
+                                }
+
                                 let prevRaw = cols.previsto !== undefined ? row[cols.previsto] : row[7];
                                 let execRaw = cols.executado !== undefined ? row[cols.executado] : row[8];
                                 let previstoVal = (prevRaw !== undefined && !isNaN(prevRaw)) ? Number(prevRaw) : 8;
@@ -770,7 +810,7 @@
                                 let motivoVal = cols.motivo !== undefined && row[cols.motivo] ? String(row[cols.motivo]).trim() : "";
 
                                 newRawData.push({
-                                    data: dataStr, mes: mesVal, area: areaVal, relatorio: relatorioVal,
+                                    data: dataStr, mes: mesVal, area: areaVal, equipamento: String(equipamentoVal).trim(), relatorio: relatorioVal,
                                     responsavel: responsavelVal, atividade: String(atividadeVal),
                                     previsto: previstoVal, executado: executadoVal, status: statusVal, motivo: motivoVal
                                 });
@@ -799,7 +839,7 @@
         window.exportToExcel = function() {
             if(filteredData.length === 0) { showToast("Sem dados para exportar."); return; }
             const exportFormat = filteredData.map(i => ({
-                'Data': i.data, 'Mês': i.mes, 'Área': i.area, 'Relatório': i.relatorio,
+                'Data': i.data, 'Mês': i.mes, 'Área': i.area, 'Equipamento': i.equipamento || '', 'Relatório': i.relatorio,
                 'Executante': i.responsavel, 'Atividade': i.atividade, 'Previstas': i.previsto,
                 'Executadas': i.executado, 'Status': i.status, 'Motivo Desvio': i.motivo
             }));
@@ -895,10 +935,8 @@
         // INICIALIZAÇÃO DA PÁGINA E VERSÃO
         // ==========================================
         window.onload = () => { 
-            // Atualiza a interface gráfica com a versão configurada no início do código
             document.getElementById('app-version-badge').innerText = 'v' + APP_VERSION;
             document.getElementById('app-version-footer').innerText = APP_VERSION;
-            
             initFirebase(); 
         };
     </script>
