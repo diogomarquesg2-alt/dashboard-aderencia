@@ -1,1074 +1,376 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQUIPORT - Dashboard de Aderência</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <title>Dashboard Equiport - Gestão de Frota</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS (xlsx) para leitura e exportação de arquivos Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- FontAwesome para ícones -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        equiport: {
-                            red: '#E30613',
-                            'dark-bg': '#1E2336',
-                            'darker-bg': '#151826',
-                            'card-dark': '#262D45'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .dark ::-webkit-scrollbar-thumb { background: #475569; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        #toast {
-            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
-            text-align: center; border-radius: 8px; padding: 12px; position: fixed;
-            z-index: 1000; right: 30px; bottom: 30px; opacity: 0; transition: opacity 0.3s, visibility 0.3s;
+        /* A Mágica do Fundo Transparente */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: url('fundo.png'); 
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15; 
+            z-index: -1;
         }
-        #toast.show { visibility: visible; opacity: 1; }
-        .dark #toast { background-color: #4ade80; color: #151826; font-weight: 600; }
-        
-        .checkbox-equiport { accent-color: #E30613; }
-        .dark input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.7; cursor: pointer; }
+        .glass-panel {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        table { border-collapse: collapse; width: 100%; }
+        th { background-color: #1e3a8a; color: white; padding: 12px; text-align: left; font-size: 12px; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; font-size: 13px; font-weight: 500; }
     </style>
 </head>
+<body class="text-gray-800 font-sans antialiased min-h-screen">
 
-<body class="bg-gray-50 text-gray-800 dark:bg-equiport-darker-bg dark:text-gray-100 h-screen flex overflow-hidden">
-    
-    <div id="toast">Mensagem do sistema</div>
+    <!-- MODAL DE PEÇAS (POP-UP) -->
+    <div id="pecasModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+        <div class="bg-white rounded-lg p-6 w-11/12 max-w-lg max-h-[80vh] flex flex-col shadow-2xl relative">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <div>
+                    <h2 class="text-2xl font-bold text-blue-900" id="modalTitle">Kits de Manutenção</h2>
+                    <p class="text-sm text-gray-500" id="modalSubtitle">Detalhes do Equipamento</p>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-red-500 font-bold text-3xl">&times;</button>
+            </div>
+            
+            <div class="overflow-y-auto flex-1 mt-2 p-4 bg-gray-50 rounded border" id="modalBody">
+                <!-- Lista de Peças será injetada aqui -->
+            </div>
 
-    <!-- MODAL DE SENHA ADMINISTRATIVA -->
-    <div id="password-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden">
-        <div class="bg-white dark:bg-equiport-card-dark p-6 rounded-xl shadow-xl w-96 border border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-bold mb-2 text-gray-900 dark:text-white"><i class="fas fa-lock text-equiport-red mr-2"></i> Área Restrita</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Insira a senha de administrador para autorizar esta ação.</p>
-            <input type="password" id="admin-password-input" placeholder="Digite a senha..." class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white mb-4" onkeydown="if(event.key === 'Enter') confirmAdminAction()">
-            <div class="flex justify-end space-x-2">
-                <button onclick="closePasswordModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors">Cancelar</button>
-                <button onclick="confirmAdminAction()" class="px-4 py-2 bg-equiport-red text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">Confirmar</button>
+            <div class="mt-6 flex justify-end">
+                <button onclick="window.print()" class="bg-gray-200 text-gray-800 font-semibold px-4 py-2 rounded shadow hover:bg-gray-300 mr-2">🖨️ Imprimir OS</button>
+                <button onclick="closeModal()" class="bg-blue-900 text-white font-semibold px-4 py-2 rounded shadow hover:bg-blue-800">Fechar</button>
             </div>
         </div>
     </div>
 
-    <aside class="w-72 bg-white dark:bg-equiport-dark-bg border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shadow-lg z-10 transition-colors">
+    <div class="flex h-screen overflow-hidden">
         
-        <div class="h-20 flex items-center justify-center border-b border-gray-200 dark:border-gray-700 bg-black p-3">
-            <svg viewBox="0 0 420 120" class="w-full h-full max-h-14" preserveAspectRatio="xMidYMid meet">
-                <path d="M 35,20 L 105,25 L 45,60 Z" fill="none" stroke="#E30613" stroke-width="4" />
-                <path d="M 25,30 L 95,35 L 40,75 Z" fill="none" stroke="#E30613" stroke-width="3" />
-                <path d="M 15,40 L 85,45 L 35,90 Z" fill="none" stroke="#E30613" stroke-width="2" />
-                <path d="M 45,35 L 115,40 L 105,95 L 55,110 Z" fill="none" stroke="#FFFFFF" stroke-width="5" />
-                <text x="130" y="70" font-family="'Inter', sans-serif" font-weight="900" font-size="52" fill="#FFFFFF" letter-spacing="1.5">EQUIPORT</text>
-                <text x="360" y="52" font-family="'Inter', sans-serif" font-weight="700" font-size="16" fill="#FFFFFF">®</text>
-                <text x="133" y="98" font-family="'Inter', sans-serif" font-weight="700" font-size="13.5" fill="#E30613" letter-spacing="3.2">EQUIPAMENTOS PARA PORTOS</text>
-            </svg>
-        </div>
-
-        <div class="p-5 flex-1 overflow-y-auto">
-            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4"><i class="fas fa-search mr-1"></i> Busca Rápida</h2>
-            
-            <div class="mb-5">
-                <input type="text" id="search-input" onkeyup="applyFilters()" placeholder="Ex: Marimex, Davi..." class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-colors">
+        <!-- BARRA LATERAL -->
+        <aside class="w-72 bg-blue-900 text-white flex flex-col shadow-2xl z-10 relative">
+            <div class="p-6 bg-blue-950">
+                <h1 class="text-2xl font-bold tracking-wider">EQUIPORT</h1>
+                <p class="text-blue-300 text-sm mt-1">Controle de Horímetros v2.1</p>
             </div>
-
-            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 border-t border-gray-200 dark:border-gray-700 pt-4"><i class="fas fa-filter mr-1"></i> Filtros de Aderência</h2>
             
-            <div class="mb-4">
-                <label for="filter-mes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mês</label>
-                <select id="filter-mes" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
-                    <option value="ALL">Todos os Meses</option>
+            <div class="p-6 flex-1 overflow-y-auto">
+                <label class="block text-sm font-semibold mb-2 text-blue-200">1. Carregar Planilha</label>
+                <input type="file" id="fileUpload" accept=".xlsx, .xls" class="block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer p-2 mb-6 focus:outline-none">
+
+                <label class="block text-sm font-semibold mb-2 text-blue-200">2. Origem (Aba)</label>
+                <select id="filterOrigem" class="w-full p-2 rounded bg-blue-800 text-white border-none mb-6">
+                    <option value="ALL">Todas as Abas</option>
+                </select>
+
+                <label class="block text-sm font-semibold mb-2 text-blue-200">3. Filtrar Cliente</label>
+                <select id="filterCliente" class="w-full p-2 rounded bg-blue-800 text-white border-none">
+                    <option value="ALL">Todos os Clientes</option>
                 </select>
             </div>
+        </aside>
 
-            <div class="mb-4">
-                <label for="filter-semana" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semana</label>
-                <select id="filter-semana" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
-                    <option value="ALL">Todas as Semanas</option>
-                </select>
-            </div>
-
-            <div class="mb-4">
-                <label for="filter-dia" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dia Específico</label>
-                <input type="date" id="filter-dia" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 transition-colors">
-            </div>
-
-            <div class="mb-4 relative" id="mercado-container">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Área</label>
-                <div onclick="toggleDropdown('mercado-dropdown')" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg flex items-center justify-between p-2.5 cursor-pointer dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors hover:border-gray-400 dark:hover:border-gray-500">
-                    <span id="mercado-dropdown-text" class="truncate select-none pointer-events-none">Todas as Áreas</span>
-                    <i class="fas fa-chevron-down text-gray-400 text-xs pointer-events-none"></i>
-                </div>
-                <div id="mercado-dropdown" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-600 max-h-48 overflow-y-auto">
-                    <div class="p-2 space-y-1" id="mercado-checkbox-list"></div>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <label for="filter-categoria" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Categoria</label>
-                <select id="filter-categoria" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
-                    <option value="ALL">Todas as Categorias</option>
-                </select>
-            </div>
-
-            <div class="mb-5">
-                <label for="filter-status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                <select id="filter-status" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-equiport-red focus:border-equiport-red block p-2.5 dark:bg-gray-800 dark:border-gray-600 dark:text-white transition-colors">
-                    <option value="ALL">Todos os Status</option>
-                    <option value="Concluído">Concluído</option>
-                    <option value="Não executado">Não executado</option>
-                </select>
-            </div>
-
-            <button onclick="resetFilters()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 mb-6">
-                <i class="fas fa-undo mr-2"></i> Limpar Filtros
-            </button>
+        <!-- ÁREA PRINCIPAL -->
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto p-8 relative">
             
-            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 border-t border-gray-200 dark:border-gray-700 pt-4"><i class="fas fa-cloud mr-1"></i> Nuvem (Global)</h2>
-            
-            <button onclick="requestPasswordForAction('import')" class="w-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 font-medium py-2 px-4 rounded-lg cursor-pointer transition-colors dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 mb-1">
-                <i class="fas fa-file-excel mr-2 text-green-600"></i> Importar Excel <i class="fas fa-lock text-[10px] ml-2"></i>
-            </button>
-            <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls" onchange="handleFileSelected(event)" />
-            <p class="text-[11px] text-gray-500 text-center mb-4"><i class="fas fa-sync text-[9px] mr-1"></i> Sincroniza em tempo real para todos</p>
-            
-            <button onclick="requestPasswordForAction('resetData')" class="w-full flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-medium py-2 px-4 rounded-lg transition-colors dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-400 text-xs">
-                <i class="fas fa-trash-alt mr-2"></i> Restaurar Dados Originais
-            </button>
-        </div>
-        
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-            <button onclick="toggleTheme()" class="w-full flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300 hover:text-equiport-red transition-colors">
-                <i id="theme-icon" class="fas fa-sun"></i>
-                <span id="theme-text">Modo Claro</span>
-            </button>
-        </div>
-    </aside>
-
-    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
-        
-        <header class="h-16 flex items-center justify-between px-8 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-equiport-dark-bg z-10">
-            <div>
-                <h1 class="text-xl font-bold">Painel de Aderência à Programação</h1>
-                <p class="text-xs text-gray-500 dark:text-gray-400" id="header-date">Sincronizado na Nuvem em tempo real</p>
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-panel border-l-4 border-blue-500">
+                    <h3 class="text-gray-500 text-sm font-bold uppercase">Total da Frota</h3>
+                    <p class="text-4xl font-black text-blue-900 mt-2" id="kpiTotal">0</p>
+                </div>
+                <div class="glass-panel border-l-4 border-red-500">
+                    <h3 class="text-gray-500 text-sm font-bold uppercase">Ação Imediata (Atrasado/Crítico)</h3>
+                    <p class="text-4xl font-black text-red-600 mt-2" id="kpiRisco">0</p>
+                </div>
+                <div class="glass-panel border-l-4 border-purple-500">
+                    <h3 class="text-gray-500 text-sm font-bold uppercase">Anomalias de Dados</h3>
+                    <p class="text-4xl font-black text-purple-700 mt-2" id="kpiAnomalia">0</p>
+                </div>
             </div>
-            <div class="flex space-x-3 items-center">
-                <span id="app-version-badge" class="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[10px] font-bold px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-700 select-none">v0.0</span>
-                <button onclick="requestPasswordForAction('export')" class="bg-equiport-red hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
-                    <i class="fas fa-download mr-2"></i> Exportar <i class="fas fa-lock text-[10px] ml-2"></i>
-                </button>
-            </div>
-        </header>
 
-        <div class="flex-1 overflow-y-auto p-8">
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                
-                <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total de Registos</p>
-                            <h3 class="text-3xl font-bold text-gray-900 dark:text-white" id="kpi-total">0</h3>
-                            <p class="text-[11px] mt-1 text-gray-500 dark:text-gray-400">
-                                <span id="kpi-rotina" class="font-bold text-blue-500">0</span> rotinas | 
-                                <span id="kpi-atend-qtd" class="font-bold text-orange-500">0</span> atendimentos
-                            </p>
-                        </div>
-                        <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                            <i class="fas fa-clipboard-list text-xl"></i>
-                        </div>
+            <!-- GRÁFICOS -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 h-80">
+                <div class="glass-panel col-span-1 flex flex-col justify-center items-center">
+                    <h3 class="text-gray-700 font-bold mb-4">Status de Revisão da Frota</h3>
+                    <div class="relative w-full h-full max-h-56">
+                        <canvas id="chartStatus"></canvas>
                     </div>
                 </div>
-
-                <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Horas Previstas x Exec</p>
-                            <h3 class="text-3xl font-bold"><span id="kpi-prev">0</span> / <span id="kpi-exec" class="text-green-600 dark:text-green-400">0</span></h3>
-                        </div>
-                        <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                            <i class="fas fa-clock text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">% de Aderência</p>
-                            <h3 class="text-3xl font-bold text-green-500" id="kpi-aderencia">0%</h3>
-                        </div>
-                        <div class="p-3 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                            <i class="fas fa-chart-pie text-xl"></i>
-                        </div>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-4 dark:bg-gray-700">
-                        <div class="bg-green-500 h-1.5 rounded-full" id="kpi-aderencia-bar" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Desvios Reportados</p>
-                            <h3 class="text-3xl font-bold text-equiport-red" id="kpi-desvios">0</h3>
-                        </div>
-                        <div class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-equiport-red">
-                            <i class="fas fa-exclamation-triangle text-xl"></i>
-                        </div>
+                <div class="glass-panel col-span-2 flex flex-col justify-center">
+                    <h3 class="text-gray-700 font-bold mb-4">Top 10 - Fila de Manutenção Crítica</h3>
+                    <div class="relative w-full h-full max-h-56">
+                        <canvas id="chartTop10"></canvas>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white dark:bg-equiport-card-dark p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 uppercase tracking-wide">Desempenho por Categoria</h3>
-                    <div class="relative h-64"><canvas id="chartCategoria"></canvas></div>
-                </div>
-                <div class="bg-white dark:bg-equiport-card-dark p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 uppercase tracking-wide">Produtividade por Executante</h3>
-                    <div class="relative h-64"><canvas id="chartEquipe"></canvas></div>
-                </div>
-                <div class="bg-white dark:bg-equiport-card-dark p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 uppercase tracking-wide">Status Geral</h3>
-                    <div class="relative h-64 flex justify-center"><canvas id="chartStatus"></canvas></div>
-                </div>
+            <!-- TABELA OPERACIONAL (LAYOUT ORIGINAL RESTAURADO) -->
+            <div class="glass-panel overflow-x-auto">
+                <h3 class="text-gray-700 font-bold mb-4">Planejamento Operacional & Almoxarifado</h3>
+                <table id="dataTable" class="min-w-full rounded-lg overflow-hidden">
+                    <thead>
+                        <tr>
+                            <th>AÇÃO</th>
+                            <th>CLIENTE</th>
+                            <th>FROTA</th>
+                            <th>S/N</th>
+                            <th>DATA ÚLT. REV.</th>
+                            <th>TIPO REV.</th>
+                            <th>HOR. PRÓXIMA</th>
+                            <th>HOR. ATUAL</th>
+                            <th>DATA HOR.</th>
+                            <th>HR RESTANTES</th>
+                            <th>OBSERVAÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="11" class="text-center text-gray-500 py-6">Carregue a planilha para visualizar os dados.</td></tr>
+                    </tbody>
+                </table>
             </div>
+        </main>
+    </div>
 
-            <div class="bg-white dark:bg-equiport-card-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col">
-                <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-equiport-card-dark">
-                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Detalhamento das Atividades</h3>
-                    <span class="text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 py-1 px-3 rounded-full" id="table-count">0 registos</span>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-800/50 dark:text-gray-300">
-                            <tr>
-                                <th class="px-6 py-3">Data</th>
-                                <th class="px-6 py-3">Área / Equipamento</th>
-                                <th class="px-6 py-3 text-center">Relatório necessário?</th>
-                                <th class="px-6 py-3">Executante</th>
-                                <th class="px-6 py-3">Atividade</th>
-                                <th class="px-6 py-3 text-center">Horas (Prev/Exec)</th>
-                                <th class="px-6 py-3">Status</th>
-                                <th class="px-6 py-3">Motivo / Observação</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body"></tbody>
-                    </table>
-                </div>
-                
-                <!-- NOVO: BARRA DE PAGINAÇÃO -->
-                <div class="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center bg-gray-50 dark:bg-equiport-card-dark gap-4">
-                    <span class="text-sm text-gray-500 dark:text-gray-400" id="pagination-info">Mostrando 0 a 0 de 0 registos</span>
-                    <div class="flex items-center space-x-1" id="pagination-controls">
-                        <!-- Botões gerados via JavaScript -->
-                    </div>
-                </div>
-            </div>
-            
-            <footer class="mt-8 text-center text-xs text-gray-400 pb-4">
-                &copy; 2026 EQUIPORT Equipamentos para Portos. Todos os direitos reservados. &bull; Versão <span id="app-version-footer">0.0</span>
-            </footer>
-        </div>
-    </main>
+    <script>
+        let globalData = [];
+        let chartStatusInstance = null;
+        let chartTop10Instance = null;
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // ==========================================
-        // CONFIGURAÇÕES GERAIS DO SISTEMA
-        // ==========================================
-        const APP_VERSION = "2.1"; // <-- INOVAÇÃO: Paginação inteligente implementada na tabela.
-        const ADMIN_PASSWORD = "equiport2026";
-        const appId = 'equiport-aderencia-v1';
-        // ==========================================
-
-        let pendingAction = null;
-        let currentPage = 1;         // Página inicial
-        const rowsPerPage = 15;      // Quantidade de registos visíveis por ecrã (Evita scroll infinito)
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyBxfDptYS8z4aGBPLI9FSboBQvxdoSzKTA",
-            authDomain: "equiport-aderencia.firebaseapp.com",
-            projectId: "equiport-aderencia",
-            storageBucket: "equiport-aderencia.firebasestorage.app",
-            messagingSenderId: "335189815020",
-            appId: "1:335189815020:web:2f62882849ee6c1a8bbfc9",
-            measurementId: "G-F6FJVZ1WPP"
-        };
-
-        let app, db, auth;
-        let rawData = [];
-        let filteredData = [];
-        let charts = {};
-
-        const defaultRawData = [
-            {data: '17/08/2026', mes: 'Agosto', area: 'MARIMEX', equipamento: '', relatorio: 'Sim', responsavel: 'Davi / Muller', atividade: 'Manutenção preventiva de 1.500 horas', previsto: 8, executado: 8, status: 'Concluído', motivo: ''}
-        ];
-
-        window.showToast = function(message) {
-            const toast = document.getElementById('toast');
-            toast.innerText = message;
-            toast.className = "show";
-            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        // Limpador de números
+        function parseExcelNumber(val) {
+            if (val === undefined || val === null || val === '') return null;
+            if (typeof val === 'number') return val;
+            let str = val.toString().trim();
+            if (/^\d{1,3}(\.\d{3})+$/.test(str) \vert{}\vert{} /^\d+\.\d+$/.test(str)) str = str.replace(/\./g, '');
+            let num = parseFloat(str);
+            return isNaN(num) ? null : num;
         }
 
-        window.getWeekLabel = function(dateString) {
-            if (!dateString) return "";
-            const parts = String(dateString).split('/');
-            if(parts.length !== 3) return "Data Inválida";
-            const d = new Date(parts[2], parts[1] - 1, parts[0]);
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-            const monday = new Date(d.getFullYear(), d.getMonth(), diff);
-            const sunday = new Date(monday.valueOf());
-            sunday.setDate(monday.getDate() + 6);
-            const format = (date) => String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0');
-            return `${format(monday)} a ${format(sunday)}`;
-        }
-
-        window.enrichData = function(items) {
-            items.forEach(item => {
-                let text = (item.atividade || "").toLowerCase();
-                if (text.includes('preventiva')) item.categoria = "Manutenção Preventiva";
-                else if (text.includes('preditiva')) item.categoria = "Manutenção Preditiva";
-                else if (text.includes('inspeç') || text.includes('avaliar') || text.includes('revisar')) item.categoria = "Inspeção / Avaliação";
-                else if (text.includes('montagem') || text.includes('fixaç') || text.includes('substituir')) item.categoria = "Montagem / Troca";
-                else if (text.includes('corretiva') || text.includes('atendimento') || text.includes('emergência')) item.categoria = "Atendimento Corretivo";
-                else item.categoria = "Corretiva / Outros";
-
-                item.semana = getWeekLabel(item.data);
-                
-                if(String(item.status).toLowerCase().trim() === 'não executado' && Number(item.executado) > 0) {
-                    item.status = "Concluído";
-                } else if(!item.status) {
-                    item.status = (Number(item.executado) > 0) ? "Concluído" : "Não executado";
-                }
-            });
-        }
-
-        window.toggleDropdown = function(id) {
-            const dropdown = document.getElementById(id);
-            dropdown.classList.toggle('hidden');
-        }
-
-        document.addEventListener('click', function(event) {
-            const container = document.getElementById('mercado-container');
-            const dropdown = document.getElementById('mercado-dropdown');
-            if (container && dropdown && !container.contains(event.target)) {
-                dropdown.classList.add('hidden');
+        // Conversor de datas
+        function formatExcelDate(val) {
+            if (!val) return "-";
+            if (typeof val === 'number') {
+                let date = new Date((val - (25567 + 2)) * 86400 * 1000);
+                return date.toLocaleDateString('pt-BR', {timeZone: 'UTC'});
             }
-        });
+            return val.toString().trim();
+        }
 
-        window.handleMercadoChange = function(checkbox) {
-            const checkboxes = document.querySelectorAll('.mercado-cb');
-            const allCb = document.querySelector('.mercado-cb[value="ALL"]');
-            const individualCbs = Array.from(checkboxes).filter(cb => cb.value !== 'ALL');
+        // Abrir e fechar Pop-up
+        function openModal(id) {
+            const item = globalData.find(d => d.id === id);
+            if (!item) return;
+
+            document.getElementById('modalTitle').innerText = `Kits: ${item.frota} - Revisão ${item.tipoRev}`;
+            document.getElementById('modalSubtitle').innerText = `Equipamento S/N: ${item.sn} | Cliente: ${item.cliente}`;
             
-            if (checkbox.value === 'ALL') {
-                individualCbs.forEach(cb => { cb.checked = checkbox.checked; });
+            const body = document.getElementById('modalBody');
+            
+            // Lógica para formatar o texto que você colou na planilha
+            if (!item.kits || item.kits === '-' || item.kits.trim() === '') {
+                body.innerHTML = '<span class="text-gray-500 italic block text-center mt-4">Nenhuma peça registrada na coluna "KITS" para este equipamento.</span>';
             } else {
-                const allChecked = individualCbs.every(cb => cb.checked);
-                if (allCb) allCb.checked = allChecked;
-            }
-
-            updateMercadoText();
-            applyFilters();
-        }
-
-        window.updateMercadoText = function() {
-            const checkboxes = document.querySelectorAll('.mercado-cb');
-            const individualCbs = Array.from(checkboxes).filter(cb => cb.value !== 'ALL');
-            const checkedIndividual = individualCbs.filter(cb => cb.checked);
-            const allCb = document.querySelector('.mercado-cb[value="ALL"]');
-            const textEl = document.getElementById('mercado-dropdown-text');
-            
-            if ((allCb && allCb.checked) || checkedIndividual.length === 0) {
-                textEl.innerText = "Todas as Áreas";
-            } else if (checkedIndividual.length === 1) {
-                textEl.innerText = checkedIndividual[0].value;
-            } else {
-                textEl.innerText = `${checkedIndividual.length} áreas selecionadas`;
-            }
-        }
-
-        window.initializeFilters = function() {
-            const meses = [...new Set(rawData.map(item => item.mes).filter(m => m && m !== ""))].sort();
-            const mercados = [...new Set(rawData.map(item => item.area).filter(a => a))].sort();
-            const categorias = [...new Set(rawData.map(item => item.categoria).filter(c => c))].sort();
-
-            const parseFirstDate = str => {
-                if(!str || str === "Data Inválida") return 99999999;
-                const parts = str.split(' a ')[0].split('/');
-                return Number(parts[1]) * 100 + Number(parts[0]);
-            };
-            const semanas = [...new Set(rawData.map(item => item.semana).filter(s => s && s !== "Data Inválida" && s !== ""))].sort((a, b) => parseFirstDate(a) - parseFirstDate(b));
-
-            const populateSelect = (id, options) => {
-                const select = document.getElementById(id);
-                if (!select) return;
-                const currentVal = select.value;
-                select.innerHTML = select.options[0].outerHTML; 
-                options.forEach(opt => select.add(new Option(opt, opt)));
-                select.value = currentVal;
-            };
-
-            populateSelect('filter-mes', meses);
-            populateSelect('filter-semana', semanas);
-            populateSelect('filter-categoria', categorias);
-
-            const mercadoList = document.getElementById('mercado-checkbox-list');
-            if (mercadoList) {
-                let currentChecks = Array.from(document.querySelectorAll('.mercado-cb:checked')).map(cb => cb.value);
-                if (currentChecks.length === 0) currentChecks = ['ALL'];
-                const isAllChecked = currentChecks.includes('ALL');
-
-                let html = `
-                    <label class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
-                        <input type="checkbox" value="ALL" class="mercado-cb checkbox-equiport w-4 h-4 bg-gray-100 border-gray-300 rounded cursor-pointer dark:bg-gray-700 dark:border-gray-500" onchange="handleMercadoChange(this)" ${isAllChecked ? 'checked' : ''}>
-                        <span class="ml-2 text-sm font-semibold text-gray-900 dark:text-gray-200">Todas as Áreas</span>
-                    </label>
-                `;
-                
-                mercados.forEach(mercado => {
-                    const isChecked = (isAllChecked || currentChecks.includes(mercado)) ? 'checked' : '';
-                    html += `
-                        <label class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
-                            <input type="checkbox" value="${mercado}" class="mercado-cb checkbox-equiport w-4 h-4 bg-gray-100 border-gray-300 rounded cursor-pointer dark:bg-gray-700 dark:border-gray-500" onchange="handleMercadoChange(this)" ${isChecked}>
-                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">${mercado}</span>
-                        </label>
-                    `;
+                let lines = item.kits.split('\n');
+                let html = '<ul class="list-disc pl-5 space-y-2 text-gray-700 font-semibold">';
+                lines.forEach(line => {
+                    if(line.trim()) html += `<li>${line.trim()}</li>`;
                 });
-                mercadoList.innerHTML = html;
-                updateMercadoText();
+                html += '</ul>';
+                body.innerHTML = html;
             }
+            document.getElementById('pecasModal').classList.remove('hidden');
         }
 
-        window.applyFilters = function() {
-            currentPage = 1; // Ao filtrar, volta sempre para a primeira página
-
-            const mes = document.getElementById('filter-mes').value;
-            const semana = document.getElementById('filter-semana').value;
-            
-            const diaRaw = document.getElementById('filter-dia').value;
-            let diaFormatado = 'ALL';
-            if (diaRaw) {
-                const parts = diaRaw.split('-');
-                diaFormatado = `${parts[2]}/${parts[1]}/${parts[0]}`;
-            }
-
-            const categoria = document.getElementById('filter-categoria').value;
-            const status = document.getElementById('filter-status').value;
-            const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
-
-            const mercadosSelecionados = Array.from(document.querySelectorAll('.mercado-cb:checked')).map(cb => cb.value);
-
-            filteredData = rawData.filter(item => {
-                const matchMes = (mes === 'ALL' || item.mes === mes);
-                const matchSemana = (semana === 'ALL' || item.semana === semana);
-                const matchDia = (diaFormatado === 'ALL' || item.data === diaFormatado);
-                const matchMercado = (mercadosSelecionados.includes('ALL') || mercadosSelecionados.length === 0 || mercadosSelecionados.includes(item.area));
-                const matchCategoria = (categoria === 'ALL' || item.categoria === categoria);
-                const matchStatus = (status === 'ALL' || item.status === status);
-                
-                const searchStr = `${item.atividade} ${item.area} ${item.equipamento || ''} ${item.responsavel} ${item.motivo}`.toLowerCase();
-                const matchSearch = (searchTerm === '' || searchStr.includes(searchTerm));
-                
-                return matchMes && matchSemana && matchDia && matchMercado && matchCategoria && matchStatus && matchSearch;
-            });
-
-            updateDashboard();
+        function closeModal() {
+            document.getElementById('pecasModal').classList.add('hidden');
         }
 
-        window.resetFilters = function() {
-            document.getElementById('search-input').value = '';
-            document.getElementById('filter-mes').value = 'ALL';
-            document.getElementById('filter-semana').value = 'ALL';
-            document.getElementById('filter-dia').value = '';
-            document.getElementById('filter-categoria').value = 'ALL';
-            document.getElementById('filter-status').value = 'ALL';
-
-            const checkboxes = document.querySelectorAll('.mercado-cb');
-            checkboxes.forEach(cb => { cb.checked = true; });
-            updateMercadoText();
-
-            applyFilters();
-        }
-
-        window.updateDashboard = function() {
-            let qtdRotina = 0;
-            let qtdAtendimentos = 0;
-            let previsto = 0;
-            let executado = 0;
-            let desvios = 0;
-
-            filteredData.forEach(item => {
-                const isAtend = (item.categoria === 'Atendimento Corretivo');
-                
-                if (isAtend) qtdAtendimentos++;
-                else qtdRotina++;
-
-                previsto += Number(item.previsto) || 0;
-                executado += Number(item.executado) || 0;
-                
-                if (!isAtend && item.motivo && item.motivo.trim() !== '' && item.motivo.toLowerCase() !== 'concluído') {
-                    desvios++;
-                }
-            });
-
-            const aderencia = previsto > 0 ? ((executado / previsto) * 100).toFixed(1) : 0;
-
-            document.getElementById('kpi-total').innerText = filteredData.length;
-            document.getElementById('kpi-rotina').innerText = qtdRotina;
-            document.getElementById('kpi-atend-qtd').innerText = qtdAtendimentos;
-            
-            document.getElementById('kpi-prev').innerText = previsto + 'h';
-            document.getElementById('kpi-exec').innerText = executado + 'h';
-            
-            const kpiAderencia = document.getElementById('kpi-aderencia');
-            const kpiAderenciaBar = document.getElementById('kpi-aderencia-bar');
-            kpiAderencia.innerText = aderencia + '%';
-            kpiAderenciaBar.style.width = Math.min(aderencia, 100) + '%';
-
-            kpiAderencia.classList.remove('text-green-500', 'text-yellow-500', 'text-equiport-red');
-            kpiAderenciaBar.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-equiport-red');
-            
-            if (aderencia >= 90) {
-                kpiAderencia.classList.add('text-green-500');
-                kpiAderenciaBar.classList.add('bg-green-500');
-            } else if (aderencia >= 80) {
-                kpiAderencia.classList.add('text-yellow-500');
-                kpiAderenciaBar.classList.add('bg-yellow-500');
-            } else {
-                kpiAderencia.classList.add('text-equiport-red');
-                kpiAderenciaBar.classList.add('bg-equiport-red');
-            }
-
-            document.getElementById('kpi-desvios').innerText = desvios;
-
-            updateCharts();
-            updateTable();
-        }
-
-        window.updateCharts = function() {
-            const isDark = document.documentElement.classList.contains('dark');
-            const textColor = isDark ? '#d1d5db' : '#4b5563';
-            const gridColor = isDark ? '#374151' : '#e5e7eb';
-            const brandColor = '#E30613';
-            const successColor = '#10B981';
-
-            const catCounts = {};
-            filteredData.forEach(i => catCounts[i.categoria] = (catCounts[i.categoria] || 0) + 1);
-            
-            if(charts.categoria) charts.categoria.destroy();
-            const ctxCat = document.getElementById('chartCategoria').getContext('2d');
-            charts.categoria = new Chart(ctxCat, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(catCounts),
-                    datasets: [{
-                        data: Object.values(catCounts),
-                        backgroundColor: ['#3b82f6', brandColor, '#f59e0b', '#8b5cf6', '#64748b', '#10B981', '#ec4899', '#06b6d4'],
-                        borderWidth: 0
-                    }]
-                },
-                options: { 
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 15, font: {size: 11} } } },
-                    cutout: '70%'
-                }
-            });
-
-            const respMap = {};
-            filteredData.forEach(i => {
-                if(!i.responsavel) return;
-                
-                if(!respMap[i.responsavel]) {
-                    respMap[i.responsavel] = { prev: 0, execRotina: 0, execAtendimento: 0, totalExec: 0 };
-                }
-                
-                const isAtendimento = (i.categoria === "Atendimento Corretivo");
-                const prevVal = Number(i.previsto) || 0;
-                const execVal = Number(i.executado) || 0;
-
-                respMap[i.responsavel].prev += prevVal;
-                respMap[i.responsavel].totalExec += execVal;
-                
-                if (isAtendimento) {
-                    respMap[i.responsavel].execAtendimento += execVal;
-                } else {
-                    respMap[i.responsavel].execRotina += execVal;
-                }
-            });
-            
-            const sortedResp = Object.entries(respMap).sort((a,b) => b[1].totalExec - a[1].totalExec).slice(0, 5);
-
-            if(charts.equipe) charts.equipe.destroy();
-            const ctxEqp = document.getElementById('chartEquipe').getContext('2d');
-            charts.equipe = new Chart(ctxEqp, {
-                type: 'bar',
-                data: {
-                    labels: sortedResp.map(r => r[0]),
-                    datasets: [
-                        { label: 'Programado (h)', data: sortedResp.map(r => r[1].prev), backgroundColor: '#94a3b8' },
-                        { label: 'Executado Rotina (h)', data: sortedResp.map(r => r[1].execRotina), backgroundColor: successColor },
-                        { label: 'Atendimentos (h)', data: sortedResp.map(r => r[1].execAtendimento), backgroundColor: '#f97316' }
-                    ]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true, maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { color: gridColor }, ticks: { color: textColor } },
-                        y: { grid: { display: false }, ticks: { color: textColor, font: {size: 10} } }
-                    },
-                    plugins: { legend: { labels: { color: textColor } } }
-                }
-            });
-
-            const statCounts = {};
-            filteredData.forEach(i => {
-                let statusBase = String(i.status).trim();
-                
-                if (statusBase.toLowerCase() === 'concluído') {
-                    if (i.categoria === 'Atendimento Corretivo') {
-                        statCounts['Concluído (Atendimento)'] = (statCounts['Concluído (Atendimento)'] || 0) + 1;
-                    } else {
-                        statCounts['Concluído (Rotina)'] = (statCounts['Concluído (Rotina)'] || 0) + 1;
-                    }
-                } else {
-                    statCounts[statusBase] = (statCounts[statusBase] || 0) + 1;
-                }
-            });
-
-            const statLabels = Object.keys(statCounts);
-            const statColors = statLabels.map(label => {
-                if(label === 'Concluído (Rotina)') return successColor;
-                if(label === 'Concluído (Atendimento)') return '#f97316';
-                if(label.toLowerCase() === 'não executado') return brandColor;
-                return '#f59e0b';
-            });
-
-            if(charts.status) charts.status.destroy();
-            const ctxStat = document.getElementById('chartStatus').getContext('2d');
-            charts.status = new Chart(ctxStat, {
-                type: 'pie',
-                data: {
-                    labels: statLabels,
-                    datasets: [{
-                        data: Object.values(statCounts),
-                        backgroundColor: statColors,
-                        borderWidth: 0
-                    }]
-                },
-                options: { 
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { color: textColor } } }
-                }
-            });
-        }
-
-        // ==========================================
-        // LÓGICA DE PAGINAÇÃO E RENDERIZAÇÃO DA TABELA
-        // ==========================================
-        window.goToPage = function(pageNumber) {
-            currentPage = pageNumber;
-            updateTable();
-        }
-
-        window.updateTable = function() {
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = '';
-            document.getElementById('table-count').innerText = `${filteredData.length} registos`;
-
-            if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">Nenhum registo encontrado.</td></tr>`;
-                document.getElementById('pagination-info').innerText = `Mostrando 0 a 0 de 0 registos`;
-                document.getElementById('pagination-controls').innerHTML = '';
-                return;
-            }
-
-            // Cálculos da paginação
-            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-            if (currentPage > totalPages) currentPage = totalPages;
-            
-            const startIdx = (currentPage - 1) * rowsPerPage;
-            const endIdx = Math.min(startIdx + rowsPerPage, filteredData.length);
-            
-            const paginatedData = filteredData.slice(startIdx, endIdx);
-
-            paginatedData.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "bg-white border-b dark:bg-equiport-card-dark dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors";
-                
-                let statusBadge = item.status === 'Concluído' 
-                    ? `<span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-green-900 dark:text-green-300">${item.status}</span>`
-                    : `<span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">${item.status}</span>`;
-                
-                let relVal = String(item.relatorio || "").toUpperCase();
-                let relBadge = (relVal.includes('SIM') || relVal === 'TRUE' || relVal === 'S')
-                    ? `<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2.5 py-1 rounded dark:bg-blue-900 dark:text-blue-300 border border-blue-200 dark:border-blue-800"><i class="fas fa-file-signature mr-1"></i> SIM</span>`
-                    : `<span class="bg-gray-100 text-gray-500 text-[10px] font-bold px-2.5 py-1 rounded dark:bg-gray-700 dark:text-gray-400">NÃO</span>`;
-
-                let motivoText = item.motivo ? item.motivo : '-';
-                let motivoClass = 'text-gray-500 dark:text-gray-400';
-                let motivoDisplay = motivoText;
-
-                if (motivoText !== '-') {
-                    if (item.categoria === 'Atendimento Corretivo') {
-                        motivoClass = 'text-orange-500 font-semibold dark:text-orange-400';
-                        motivoDisplay = `<i class="fas fa-tools mr-1"></i> ${motivoText}`;
-                    } else if (item.status === 'Não executado' || Number(item.executado) < Number(item.previsto)) {
-                        motivoClass = 'text-equiport-red font-semibold dark:text-red-400';
-                        motivoDisplay = `<i class="fas fa-exclamation-circle mr-1"></i> ${motivoText}`;
-                    } else {
-                        motivoClass = 'text-gray-700 font-medium dark:text-gray-300';
-                    }
-                }
-
-                let equipBadge = item.equipamento && item.equipamento !== '-' 
-                    ? `<span class="block mt-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-2 py-0.5 rounded w-max"><i class="fas fa-truck-monster mr-1"></i> ${item.equipamento}</span>` 
-                    : '';
-
-                tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap font-medium">${item.data || ''}</td>
-                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">
-                        ${item.area || ''}
-                        ${equipBadge}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center">${relBadge}</td>
-                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">${item.responsavel || ''}</td>
-                    <td class="px-6 py-4 text-gray-700 dark:text-gray-300">${item.atividade || ''}</td>
-                    <td class="px-6 py-4 text-center font-mono">
-                        <span class="text-gray-500">${item.previsto}h</span> / <span class="font-bold text-gray-900 dark:text-white">${item.executado}h</span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                    <td class="px-6 py-4 ${motivoClass} text-xs max-w-xs truncate" title="${motivoText}">${motivoDisplay}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            // Geração visual dos controlos de paginação
-            document.getElementById('pagination-info').innerHTML = `Mostrando <span class="font-semibold text-gray-900 dark:text-white">${startIdx + 1}</span> a <span class="font-semibold text-gray-900 dark:text-white">${endIdx}</span> de <span class="font-semibold text-gray-900 dark:text-white">${filteredData.length}</span> registos`;
-
-            let pgHtml = '';
-
-            const prevDisabled = currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer text-gray-700 dark:text-gray-300';
-            const prevClick = currentPage === 1 ? '' : `onclick="goToPage(${currentPage - 1})"`;
-            pgHtml += `<button ${prevClick} class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium transition-colors ${prevDisabled}"><i class="fas fa-chevron-left text-[10px] mr-1"></i> Ant</button>`;
-
-            let startPage = Math.max(1, currentPage - 2);
-            let endPage = Math.min(totalPages, currentPage + 2);
-            
-            if (startPage > 1) {
-                pgHtml += `<button onclick="goToPage(1)" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">1</button>`;
-                if (startPage > 2) pgHtml += `<span class="px-2 py-1.5 text-gray-500">...</span>`;
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                if (i === currentPage) {
-                    pgHtml += `<button class="px-3 py-1.5 rounded-lg border border-equiport-red bg-equiport-red text-white text-sm font-medium">${i}</button>`;
-                } else {
-                    pgHtml += `<button onclick="goToPage(${i})" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">${i}</button>`;
-                }
-            }
-
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) pgHtml += `<span class="px-2 py-1.5 text-gray-500">...</span>`;
-                pgHtml += `<button onclick="goToPage(${totalPages})" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">${totalPages}</button>`;
-            }
-
-            const nextDisabled = currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer text-gray-700 dark:text-gray-300';
-            const nextClick = currentPage === totalPages ? '' : `onclick="goToPage(${currentPage + 1})"`;
-            pgHtml += `<button ${nextClick} class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium transition-colors ${nextDisabled}">Próx <i class="fas fa-chevron-right text-[10px] ml-1"></i></button>`;
-
-            document.getElementById('pagination-controls').innerHTML = pgHtml;
-        }
-
-        window.formatExcelDate = function(excelSerialDate) {
-            if (!excelSerialDate) return "";
-            if (typeof excelSerialDate === 'string') return excelSerialDate;
-            const date = new Date((excelSerialDate - (25567 + 2)) * 86400 * 1000);
-            if (isNaN(date.getTime())) return String(excelSerialDate);
-            return `${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCMonth() + 1).padStart(2, '0')}/${date.getUTCFullYear()}`;
-        }
-
-        window.requestPasswordForAction = function(actionType) {
-            pendingAction = actionType;
-            document.getElementById('admin-password-input').value = '';
-            document.getElementById('password-modal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('admin-password-input').focus(), 100);
-        }
-
-        window.closePasswordModal = function() {
-            document.getElementById('password-modal').classList.add('hidden');
-            pendingAction = null;
-        }
-
-        window.confirmAdminAction = async function() {
-            if (document.getElementById('admin-password-input').value === ADMIN_PASSWORD) {
-                const action = pendingAction;
-                closePasswordModal();
-                if (action === 'import') document.getElementById('fileInput').click();
-                else if (action === 'export') exportToExcel();
-                else if (action === 'resetData') {
-                    if (confirm("Deseja restaurar os dados originais?")) {
-                        rawData = [...defaultRawData];
-                        enrichData(rawData);
-                        await saveToCloud(rawData);
-                        initializeFilters();
-                        applyFilters();
-                        showToast("Dados originais restaurados!");
-                    }
-                }
-            } else {
-                showToast("Senha incorreta!");
-            }
-        }
-
-        window.handleFileSelected = async function(e) {
+        // Leitura do Arquivo Excel
+        document.getElementById('fileUpload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonRows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-                    
-                    if(jsonRows.length > 1) {
-                        let headerIdx = -1;
-                        let cols = {};
-                        for(let i=0; i<Math.min(10, jsonRows.length); i++) {
-                            const rowStr = JSON.stringify(jsonRows[i]).toLowerCase();
-                            if(rowStr.includes('data') && (rowStr.includes('área') || rowStr.includes('area')) && rowStr.includes('atividade')) {
-                                headerIdx = i;
-                                jsonRows[i].forEach((cell, idx) => {
-                                    if(!cell) return;
-                                    const c = String(cell).toLowerCase().trim();
-                                    
-                                    if(c === 'data') cols.data = idx;
-                                    else if(c === 'mês' || c === 'mes') cols.mes = idx;
-                                    else if(c === 'área' || c === 'area' || c === 'cliente') cols.area = idx;
-                                    else if(c.includes('equipamento') || c.includes('frota') || c === 'eqp' || c === 'veículo') cols.equipamento = idx;
-                                    else if(c.includes('relatório') || c.includes('relatorio')) cols.relatorio = idx;
-                                    else if(c.includes('responsável') || c.includes('responsavel') || c.includes('executante')) cols.responsavel = idx;
-                                    else if(c === 'atividade') cols.atividade = idx;
-                                    else if(c.includes('programado') || c.includes('previst') || c === 'prev') cols.previsto = idx;
-                                    else if(c.includes('executad') || c === 'exec') cols.executado = idx;
-                                    else if(c === 'status') cols.status = idx;
-                                    else if(c.includes('motivo') || c.includes('desvio') || c.includes('observaç')) cols.motivo = idx;
-                                });
-                                break;
-                            }
-                        }
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                globalData = [];
+                let origens = new Set();
+                let rowCounter = 0; // ID único para os pop-ups
 
-                        if(headerIdx === -1) {
-                            showToast("Não foi possível identificar o cabeçalho.");
-                            return;
-                        }
+                workbook.SheetNames.forEach(sheetName => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    const rawData = XLSX.utils.sheet_to_json(worksheet, {header: 1}); 
+                    if(rawData.length === 0) return;
 
-                        const newRawData = [];
-                        for (let r = headerIdx + 1; r < jsonRows.length; r++) {
-                            const row = jsonRows[r];
-                            if(!row || row.length === 0) continue;
+                    let headerRowIndex = -1;
+                    let colKits = -1;
 
-                            let dataVal = cols.data !== undefined ? row[cols.data] : row[0];
-                            let dataStr = typeof dataVal === 'number' ? formatExcelDate(dataVal) : (dataVal || "");
-                            let mesVal = cols.mes !== undefined ? row[cols.mes] : (row[1] || "Agosto");
-                            let areaVal = cols.area !== undefined ? row[cols.area] : (row[2] || "");
-                            let responsavelVal = cols.responsavel !== undefined ? row[cols.responsavel] : (row[5] || "");
-                            let atividadeVal = cols.atividade !== undefined ? row[cols.atividade] : (row[6] || "");
-
-                            if (areaVal || atividadeVal) {
-                                let relatorioVal = "Não";
-                                let relIndex = cols.relatorio;
-                                if (relIndex !== undefined && row[relIndex] !== undefined) {
-                                    relatorioVal = row[relIndex];
-                                } else {
-                                    for(let c=2; c<row.length; c++) {
-                                        const valStr = String(row[c] || "").toLowerCase().trim();
-                                        if(valStr === 'sim' || valStr === 'não' || valStr === 'nao') { 
-                                            relatorioVal = row[c]; 
-                                            relIndex = c;
-                                            break; 
-                                        }
-                                    }
+                    // Procura o cabeçalho "CLIENTES" e acha dinamicamente a coluna "KITS"
+                    for (let i = 0; i < Math.min(20, rawData.length); i++) {
+                        if (rawData[i] && rawData[i].some(cell => typeof cell === 'string' && cell.toUpperCase().includes('CLIENTES'))) {
+                            headerRowIndex = i;
+                            for (let j = 0; j < rawData[i].length; j++) {
+                                if (typeof rawData[i][j] === 'string' && rawData[i][j].toUpperCase().trim() === 'KITS') {
+                                    colKits = j;
                                 }
-
-                                let equipamentoVal = "";
-                                if (cols.equipamento !== undefined && row[cols.equipamento] !== undefined) {
-                                    equipamentoVal = row[cols.equipamento];
-                                } else {
-                                    let areaIdx = cols.area !== undefined ? cols.area : 2;
-                                    if (relIndex > areaIdx + 1) {
-                                        equipamentoVal = row[areaIdx + 1] || "";
-                                    }
-                                }
-
-                                let prevRaw = cols.previsto !== undefined ? row[cols.previsto] : row[7];
-                                let execRaw = cols.executado !== undefined ? row[cols.executado] : row[8];
-                                let previstoVal = (prevRaw !== undefined && !isNaN(prevRaw)) ? Number(prevRaw) : 8;
-                                let executadoVal = (execRaw !== undefined && !isNaN(execRaw)) ? Number(execRaw) : 0;
-                                
-                                let statusVal = cols.status !== undefined && row[cols.status] ? String(row[cols.status]).trim() : (executadoVal > 0 ? "Concluído" : "Não executado");
-                                let motivoVal = cols.motivo !== undefined && row[cols.motivo] ? String(row[cols.motivo]).trim() : "";
-
-                                newRawData.push({
-                                    data: dataStr, mes: mesVal, area: areaVal, equipamento: String(equipamentoVal).trim(), relatorio: relatorioVal,
-                                    responsavel: responsavelVal, atividade: String(atividadeVal),
-                                    previsto: previstoVal, executado: executadoVal, status: statusVal, motivo: motivoVal
-                                });
                             }
-                        }
-
-                        if (newRawData.length > 0) {
-                            rawData = newRawData;
-                            enrichData(rawData);
-                            await saveToCloud(rawData);
-                            initializeFilters();
-                            applyFilters();
-                            showToast(`Planilha importada e salva na nuvem! (${rawData.length} atividades)`);
+                            break;
                         }
                     }
-                } catch(error) {
-                    console.error(error);
-                    showToast("Erro ao ler o arquivo Excel.");
-                } finally {
-                    document.getElementById('fileInput').value = '';
-                }
+
+                    if (headerRowIndex === -1) return; // Se não for tabela de frota, ignora a aba
+                    origens.add(sheetName);
+
+                    for (let i = headerRowIndex + 1; i < rawData.length; i++) {
+                        const row = rawData[i];
+                        if (!row || !row[0]) continue; 
+
+                        const cliente = row[0] ? row[0].toString().trim() : "Desconhecido";
+                        const frota = row[1] ? row[1].toString().trim() : "-";
+                        const sn = row[2] ? row[2].toString().trim() : "-";
+                        const dataUltima = formatExcelDate(row[3]);
+                        const tipoRev = row[4] ? row[4].toString().trim() : "-";
+                        const horProx = parseExcelNumber(row[5]);
+                        const horAtual = parseExcelNumber(row[6]);
+                        const dataHor = formatExcelDate(row[7]);
+                        const obs = row[9] ? row[9].toString().trim() : "-";
+                        
+                        // Lê a célula nova de KITS (onde quer que ela esteja)
+                        const kitsText = colKits !== -1 && row[colKits] ? row[colKits].toString().trim() : "";
+
+                        let hrRestantes = null;
+                        if (horProx !== null && horAtual !== null) {
+                            hrRestantes = Math.round(horProx - horAtual);
+                        }
+
+                        if (hrRestantes !== null) {
+                            globalData.push({ 
+                                id: rowCounter++, 
+                                origem: sheetName, 
+                                cliente, frota, sn, dataUltima, tipoRev, horProx, horAtual, dataHor, hrRestantes, obs, kits: kitsText 
+                            });
+                        }
+                    }
+                });
+
+                updateFilters(origens);
+                renderDashboard();
             };
             reader.readAsArrayBuffer(file);
+        });
+
+        function updateFilters(origens) {
+            const selectOrigem = document.getElementById('filterOrigem');
+            selectOrigem.innerHTML = '<option value="ALL">Todas as Abas</option>';
+            origens.forEach(o => selectOrigem.innerHTML += `<option value="${o}">${o}</option>`);
+
+            const clientes = [...new Set(globalData.map(d => d.cliente))].sort();
+            const selectCliente = document.getElementById('filterCliente');
+            selectCliente.innerHTML = '<option value="ALL">Todos os Clientes</option>';
+            clientes.forEach(c => selectCliente.innerHTML += `<option value="${c}">${c}</option>`);
         }
 
-        window.exportToExcel = function() {
-            if(filteredData.length === 0) { showToast("Sem dados para exportar."); return; }
-            const exportFormat = filteredData.map(i => ({
-                'Data': i.data, 'Mês': i.mes, 'Área': i.area, 'Equipamento': i.equipamento || '', 'Relatório': i.relatorio,
-                'Executante': i.responsavel, 'Atividade': i.atividade, 'Programado': i.previsto,
-                'Executado': i.executado, 'Status': i.status, 'Observação / Desvio': i.motivo
-            }));
-            const ws = XLSX.utils.json_to_sheet(exportFormat);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Aderencia");
-            XLSX.writeFile(wb, "Relatorio_Aderencia_EQUIPORT.xlsx");
-            showToast("Relatório exportado!");
+        document.getElementById('filterOrigem').addEventListener('change', renderDashboard);
+        document.getElementById('filterCliente').addEventListener('change', renderDashboard);
+
+        function renderDashboard() {
+            const selectedOrigem = document.getElementById('filterOrigem').value;
+            const selectedCliente = document.getElementById('filterCliente').value;
+
+            let filteredData = globalData.filter(d => {
+                let matchOrigem = selectedOrigem === "ALL" || d.origem === selectedOrigem;
+                let matchCliente = selectedCliente === "ALL" || d.cliente === selectedCliente;
+                return matchOrigem && matchCliente;
+            });
+
+            let qtdTotal = filteredData.length;
+            let qtdAtrasado = filteredData.filter(d => d.hrRestantes < 0 && d.hrRestantes >= -500).length;
+            let qtdAtencao = filteredData.filter(d => d.hrRestantes >= 0 && d.hrRestantes <= 50).length;
+            let qtdAnomalia = filteredData.filter(d => d.hrRestantes < -500).length;
+            let qtdOk = filteredData.filter(d => d.hrRestantes > 50).length;
+
+            document.getElementById('kpiTotal').innerText = qtdTotal;
+            document.getElementById('kpiRisco').innerText = qtdAtrasado + qtdAtencao;
+            document.getElementById('kpiAnomalia').innerText = qtdAnomalia;
+
+            renderCharts(qtdOk, qtdAtencao, qtdAtrasado, qtdAnomalia, filteredData);
+            renderTable(filteredData);
         }
 
-        window.toggleTheme = function() {
-            const html = document.documentElement;
-            const icon = document.getElementById('theme-icon');
-            const text = document.getElementById('theme-text');
-            if (html.classList.contains('dark')) {
-                html.classList.remove('dark');
-                icon.className = 'fas fa-moon';
-                text.innerText = 'Modo Escuro';
-            } else {
-                html.classList.add('dark');
-                icon.className = 'fas fa-sun';
-                text.innerText = 'Modo Claro';
-            }
-            updateCharts();
+        function renderCharts(ok, atencao, atrasado, anomalia, data) {
+            const ctxStatus = document.getElementById('chartStatus').getContext('2d');
+            if(chartStatusInstance) chartStatusInstance.destroy();
+            chartStatusInstance = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['OK (>50h)', 'Atenção (0-50h)', 'Atrasado (<0h)', 'Anomalia (<-500h)'],
+                    datasets: [{ data: [ok, atencao, atrasado, anomalia], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#7e22ce'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            const top10Data = [...data].filter(d => d.hrRestantes >= -500).sort((a, b) => a.hrRestantes - b.hrRestantes).slice(0, 10);
+            const ctxTop10 = document.getElementById('chartTop10').getContext('2d');
+            if(chartTop10Instance) chartTop10Instance.destroy();
+            chartTop10Instance = new Chart(ctxTop10, {
+                type: 'bar',
+                data: {
+                    labels: top10Data.map(d => `${d.cliente} (${d.frota})`),
+                    datasets: [{ label: 'Horas Restantes', data: top10Data.map(d => d.hrRestantes), backgroundColor: top10Data.map(d => d.hrRestantes < 0 ? '#ef4444' : '#f59e0b'), borderRadius: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+            });
         }
 
-        async function initFirebase() {
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                window.db = db;
-                
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="11" class="text-center text-gray-500 py-6">Nenhum dado encontrado.</td></tr>';
 
-                const docRef = doc(db, 'artifacts', appId, 'store', 'aderencia_store');
-                onSnapshot(docRef, (docSnap) => {
-                    if (docSnap.exists() && docSnap.data().items?.length > 0) {
-                        rawData = docSnap.data().items;
-                        enrichData(rawData);
-                        initializeFilters();
-                        applyFilters();
-                        const now = new Date();
-                        document.getElementById('header-date').innerText = `Sincronizado da Nuvem: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-                    } else {
-                        saveToCloud(defaultRawData);
-                    }
-                }, (error) => {
-                    console.error("Erro no Listener do Firestore:", error);
-                });
-            } catch (err) {
-                console.error("FALHA CRÍTICA AO INICIALIZAR FIREBASE:", err);
-                const saved = localStorage.getItem('equiport_aderencia_data_v11');
-                if (saved) { rawData = JSON.parse(saved); } else { rawData = [...defaultRawData]; }
-                enrichData(rawData);
-                initializeFilters();
-                applyFilters();
-            }
+            data.sort((a, b) => a.hrRestantes - b.hrRestantes).forEach(item => {
+                let colorClass = 'bg-white text-gray-800';
+                if (item.hrRestantes < -500) colorClass = 'bg-purple-100 text-purple-900'; 
+                else if (item.hrRestantes < 0) colorClass = 'bg-red-100 text-red-900'; 
+                else if (item.hrRestantes <= 50) colorClass = 'bg-orange-100 text-orange-900'; 
+                else colorClass = 'bg-green-50 text-green-900'; 
+
+                // Lógica de Cor do Botão Baseada na sua nova Coluna KITS
+                const temKit = item.kits && item.kits.trim() !== '' && item.kits !== '-';
+                const btnStyle = temKit ? 'bg-blue-600 hover:bg-blue-800 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-700';
+
+                const tr = document.createElement('tr');
+                tr.className = colorClass;
+                tr.innerHTML = `
+                    <td class="text-center">
+                        <button onclick="openModal(${item.id})" class="px-2 py-1 rounded shadow text-xs font-bold transition ${btnStyle}">
+                            📦 Kits
+                        </button>
+                    </td>
+                    <td class="font-bold">${item.cliente}</td>
+                    <td>${item.frota}</td>
+                    <td>${item.sn}</td>
+                    <td>${item.dataUltima}</td>
+                    <td class="font-bold">${item.tipoRev}</td>
+                    <td>${item.horProx ? item.horProx.toLocaleString('pt-BR') : '-'}</td>
+                    <td>${item.horAtual ? item.horAtual.toLocaleString('pt-BR') : '-'}</td>
+                    <td>${item.dataHor}</td>
+                    <td class="font-black text-center text-lg">${item.hrRestantes}</td>
+                    <td class="text-xs">${item.obs}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
-
-        async function saveToCloud(items) {
-            try {
-                if (!db) {
-                    throw new Error("Firestore não inicializado.");
-                }
-                
-                let currentUser = auth.currentUser;
-                if (!currentUser) {
-                    const userCredential = await signInAnonymously(auth);
-                    currentUser = userCredential.user;
-                }
-
-                const cleanItems = JSON.parse(JSON.stringify(items));
-
-                await setDoc(doc(db, 'artifacts', appId, 'store', 'aderencia_store'), { 
-                    items: cleanItems, 
-                    updatedAt: new Date().toISOString() 
-                });
-                showToast("Salvo na nuvem com sucesso!");
-            } catch (e) {
-                console.error("Erro ao salvar na nuvem:", e);
-                localStorage.setItem('equiport_aderencia_data_v11', JSON.stringify(items));
-                showToast("Erro ao sincronizar com a nuvem. Salvo localmente.");
-            }
-        }
-
-        window.onload = () => { 
-            document.getElementById('app-version-badge').innerText = 'v' + APP_VERSION;
-            document.getElementById('app-version-footer').innerText = APP_VERSION;
-            initFirebase(); 
-        };
     </script>
 </body>
 </html>
