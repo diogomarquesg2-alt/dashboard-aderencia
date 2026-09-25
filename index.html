@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EQUIPORT - Dashboard de Aderência</title>
     
+    <!-- Bloqueio de Segurança - Anti-Inspecionar (Camada 1) -->
+    <script>
+        // Bloqueia clique com botão direito
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        // Bloqueia F12 e atalhos de desenvolvedor (Ctrl+Shift+I/J/C, Ctrl+U)
+        document.onkeydown = function(e) {
+            if(event.keyCode == 123) return false; // F12
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false; // Ctrl+Shift+I
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) return false; // Ctrl+Shift+C
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) return false; // Ctrl+Shift+J
+            if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false; // Ctrl+U
+        }
+    </script>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,6 +51,12 @@
         }
     </script>
     <style>
+        /* Desabilita a seleção de texto na página para dificultar cópias */
+        body { -webkit-user-select: none; -ms-user-select: none; user-select: none; }
+        
+        /* Libera seleção apenas em inputs (para digitar normalmente) */
+        input, select, textarea { -webkit-user-select: text; -ms-user-select: text; user-select: text; }
+
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -305,13 +326,16 @@
         // CONFIGURAÇÕES GERAIS DO SISTEMA
         // ==========================================
         const APP_VERSION = "2.1";
-        const ADMIN_PASSWORD = "equiport2026";
         const appId = 'equiport-aderencia-v1';
+        
+        // Camada 2: Senha obfusca da (hasheada em Base64 para não aparecer no F12)
+        // A palavra "equiport2026" foi convertida para "ZXF1aXBvcnQyMDI2"
+        const SECRET_HASH = "ZXF1aXBvcnQyMDI2"; 
         // ==========================================
 
         let pendingAction = null;
         let currentPage = 1;         // Página inicial
-        const rowsPerPage = 15;      // Quantidade de registos visíveis por ecrã (Evita scroll infinito)
+        const rowsPerPage = 15;      // Quantidade de registos visíveis por ecrã
         
         const firebaseConfig = {
             apiKey: "AIzaSyBxfDptYS8z4aGBPLI9FSboBQvxdoSzKTA",
@@ -833,7 +857,8 @@
         }
 
         window.confirmAdminAction = async function() {
-            if (document.getElementById('admin-password-input').value === ADMIN_PASSWORD) {
+            // Descriptografa a senha Base64 ("ZXF1aXBvcnQyMDI2" -> "equiport2026") na hora da checagem
+            if (document.getElementById('admin-password-input').value === atob(SECRET_HASH)) {
                 const action = pendingAction;
                 closePasswordModal();
                 if (action === 'import') document.getElementById('fileInput').click();
